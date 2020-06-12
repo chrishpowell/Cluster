@@ -5,6 +5,7 @@
  */
 package eu.discoveri.predikt.graph;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,12 +17,14 @@ import org.neo4j.ogm.annotation.Relationship;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public abstract class AbstractVertex extends GraphEntity implements Vertex
+public abstract class AbstractVertex extends GraphEntity implements Vertex, Serializable
 {
     // Flag vertex as 'visited'.
     private boolean         visited = false;
-    // If in a component
+    // If in a component/cluster
     private String          component = "";
+    // @TODO: This for Louvain cluster algo
+    private long            louvainIdx;
     
     // Adjacencies
     @Relationship(type="ADJS")
@@ -88,4 +91,15 @@ public abstract class AbstractVertex extends GraphEntity implements Vertex
      */
     @Override
     public void setVisited( boolean v ) { visited = v; }
+
+    /**
+     * Get Louvain algo index.
+     * @return 
+     */
+    public long getLouvainIdx() { return louvainIdx; }
+    /**
+     * Set Louvain algo index.
+     * @param louvainIdx 
+     */
+    public void setLouvainIdx(long louvainIdx) { this.louvainIdx = louvainIdx; }
 }

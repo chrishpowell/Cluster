@@ -61,6 +61,9 @@ public interface Vertex
      * @param component 
      */
     public void setComponent(String component);
+    
+    public long getLouvainIdx();
+    public void setLouvainIdx(long louvainIdx);
 
     /**
      * toString of this Vertex.

@@ -60,4 +60,16 @@ public class German extends Language
     {
         throw new UnsupportedOperationException("German");
     }
+    
+    /**
+     * Ditch Out Of Band characters (such as " for degree secs in English).
+     * 
+     * @param doc
+     * @return 
+     */
+    @Override
+    public String remOOBChars( String doc )
+    {
+        throw new UnsupportedOperationException("Mandarin");
+    }
 }

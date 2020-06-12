@@ -54,6 +54,20 @@ public class Constants
     public static final String      ENLEMMAFILE = "en-lemmatizer.dict";
     public static final String      ESLEMMAFILE = "es-lemmatizer.dict";
     
+    // Neo4j constants
+    public static int               WORD = 1, POSID = 2, LANGID = 3, LEMMID = 4, PAGEID = 5;
+    public static String            INPATH = RESROOT+"Lemmas/src/main/java/es/discoveri/lemmas/txt/";
+    
+    // Prepared statements
+    public static String            WORDPS = "insert into lemma.Word values(default,?,?,?,?,?)  on duplicate key update word=word,POSId=POSId";
+    public static String            LEMMAPS = "insert into lemma.Lemma values(default,?) on duplicate key update lemma=lemma";
+    public static String            LANGCODEPS = "insert into lemma.LangCode values(?,?)";
+    public static String            PENNPOSCODEPS = "insert into lemma.PennPOSCode values(?,?)";
+    public static String            PAGEPS = "";
+    public static String            LEMMA4WORDPS = "select id from lemma.Lemma where lemma = ?";
+    public static String            LEMMANULLPS = "insert into lemma.Lemma values(default,?)";
+    public static String            PAGEZEROPS = "insert into lemma.Page values(default,?,?)";
+    
     // Node score default (Milhelcea et al)
     public static final double      NODESCOREDEF = 0.25;
     // Node UUID
@@ -72,8 +86,8 @@ public class Constants
     public static final String      USER = "neo4j", PWD = "karabiner";
     // Transaction max. duration
     public static final int         TXDURATION = 30;                            // Secs
-    // If sentence edge weight too small do not add
-    public static final double      EDGEWEIGHTMIN = 0.01;
+    // If sentence edge weight too small do not persist edge
+    public static final double      EDGEWEIGHTMIN = 0.5;
     // Virtual servers
     public static final String      VSRV1 = "localhost";
     public static final int         PORT1 = 7687;

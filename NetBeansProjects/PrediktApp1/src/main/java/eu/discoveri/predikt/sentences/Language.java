@@ -89,6 +89,14 @@ public abstract class Language
             throws TokensListIsEmptyException;
     
     /**
+     * Ditch Out Of Band characters (such as " for degree secs in English).
+     * 
+     * @param doc
+     * @return 
+     */
+    public abstract String remOOBChars( String doc );
+    
+    /**
      * Remove stop words from token list
      * @param setup
      * @param tokens

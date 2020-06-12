@@ -69,7 +69,6 @@ public class GetDocuments
      * @throws IOException 
      */
     public static List<File> storeDocuments( List<Cluster> clusterList, int topNumClusters, String storeClusterPath, String storeClusterExt )
-        throws IOException
     {
         // If an extension, prepend with a dot
         if( storeClusterExt != "" && storeClusterExt != null )
@@ -86,15 +85,25 @@ public class GetDocuments
             String locn = "WholeWorld";
             
             // Get all documents in this cluster and slap into new file
+            System.out.println("Connect to search term and strip tags...");
             try( // Create a (new) file with no whitespace in name
                  BufferedWriter writer = new BufferedWriter( new FileWriter(storeClusterPath+c.getLabel().replaceAll("\\s+","")+storeClusterExt,false) ))
             {
                 // Get all documents in this cluster and slap into new file
-                for (org.carrot2.core.Document d : c.getAllDocuments())
+                for( org.carrot2.core.Document d : c.getAllDocuments() )
                 {
                     // Get content...
-                    locn = d.getField(org.carrot2.core.Document.CLICK_URL);
-                    org.jsoup.nodes.Document doc = Jsoup.connect(locn).get();
+                    org.jsoup.nodes.Document doc = null;
+                    try
+                    {
+//                        locn = d.getField(org.carrot2.core.Document.CLICK_URL);
+                        doc = Jsoup.connect(d.getContentUrl()).get();
+                    }
+                    catch( IOException iox )
+                    {
+                        System.out.println("Cannot connect to: " +locn+ ", " +iox.getMessage());
+                        continue;
+                    }
                     // Clean content
                     String cleanText = Jsoup.clean(doc.body().text(),Whitelist.none()).replaceAll("&amp;", "&");
                     
@@ -111,11 +120,13 @@ public class GetDocuments
                     String clusterLog = clusterToString(1,"dsc",c,3);
                     cLog.write(clusterLog);
                 }
+                catch( IOException iox )
+                    { iox.printStackTrace(); }
             }
             catch( SocketTimeoutException stex )
-            {
-                System.out.println("Can't connect to: " +locn);
-            }
+                { System.out.println("Socket timeout, cannot connect to: " +locn); }
+            catch( IOException iox )
+                { iox.printStackTrace(); }
         }
 
         // Return a list of documents of the cluster

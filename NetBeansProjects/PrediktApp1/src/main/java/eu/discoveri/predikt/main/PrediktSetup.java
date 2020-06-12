@@ -14,7 +14,7 @@ import eu.discoveri.predikt.graph.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
 import eu.discoveri.predikt.graph.SentenceNodeService;
 import eu.discoveri.predikt.sentences.CorpusProcess;
-import eu.discoveri.lemmas.db.LemmaDbBuild;
+//import eu.discoveri.lemmas.db.LemmaDbBuild;
 
 import java.sql.Connection;
 import java.util.List;
@@ -39,7 +39,7 @@ public class PrediktSetup
         Populate popl = new Populate( eu.discoveri.predikt.sentences.LangCode.en );
 
         // Connect to lemma db
-        Connection conn = LemmaDbBuild.lemmaDb();
+        //Connection conn = LemmaDbBuild.lemmaDb();
         
         /*
          * Process sentences
@@ -58,7 +58,7 @@ public class PrediktSetup
         cp.cleanTokensSentenceCorpus();
         
         // Get lemmas
-        cp.lemmatizeSentenceCorpusViaDb(conn);
+        //cp.lemmatizeSentenceCorpusViaDb(conn);
         
         // Now calculate common word count between sentences and
         // do the token/lemma counting per sentence pair (QRscore) [Updates each sentence]

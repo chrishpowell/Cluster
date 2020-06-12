@@ -41,4 +41,16 @@ public class Spanish extends Language
     {
         throw new UnsupportedOperationException("Spanish");
     }
+    
+    /**
+     * Ditch Out Of Band characters (such as " for degree secs in English).
+     * 
+     * @param doc
+     * @return 
+     */
+    @Override
+    public String remOOBChars( String doc )
+    {
+        throw new UnsupportedOperationException("Mandarin");
+    }
 }

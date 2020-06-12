@@ -33,23 +33,28 @@ public class Gather
         final Controller controller = ControllerFactory.createPooling();
 
         // Attributes
-        final Map<String, Object> attributes = new HashMap<String, Object>();
+        final Map<String,Object> attributes = new HashMap<>();
 
         // API key here! Key2:[b5f7b02d68484c278b663ebcfec86565]
-        Bing7DocumentSourceDescriptor.attributeBuilder(attributes).apiKey("a5f75d89a31f41e897aca768cd355710");
+        Bing7DocumentSourceDescriptor.attributeBuilder(attributes).apiKey("3dc9b0801a9f4856b8e5fc86387e4727");
 
         // Query and the required number of results
         attributes.put(CommonAttributesDescriptor.Keys.QUERY, query);
         attributes.put(CommonAttributesDescriptor.Keys.RESULTS, numResults);
 
         // Process (pipeline): Bing search/STC clustering
+        System.out.println("Searching and clustering...");
         final ProcessingResult result = controller.process(attributes, Bing7DocumentSource.class, STCClusteringAlgorithm.class);
 
         // Documents and cluster
         final List<Document> documents = result.getDocuments();
         final List<Cluster> clusters = result.getClusters();
-        
+        documents.forEach(d -> {
+            System.out.println("----> Site: [" +d.getField(Document.CLICK_URL)+"]");
+        });
+
         // Get documents put into 'bucket'
+        System.out.println("Storing search results...");
         GetDocuments.storeDocuments(clusters);
 
         // Display

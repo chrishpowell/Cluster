@@ -6,7 +6,6 @@
 package eu.discoveri.predikt.main;
 
 import eu.discoveri.predikt.graph.Adjacency;
-import eu.discoveri.predikt.graph.BFSAlgo;
 import eu.discoveri.predikt.graph.CDs;
 import eu.discoveri.predikt.graph.GraphUtils;
 import eu.discoveri.predikt.graph.SentenceNode;

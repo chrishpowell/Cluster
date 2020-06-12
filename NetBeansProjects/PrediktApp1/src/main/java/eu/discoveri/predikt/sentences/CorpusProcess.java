@@ -5,6 +5,10 @@
  */
 package eu.discoveri.predikt.sentences;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+
 import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.EmptySentenceListException;
 import eu.discoveri.predikt.exceptions.SentenceIsEmptyException;
@@ -40,10 +44,15 @@ import opennlp.tools.tokenize.TokenizerME;
  */
 public class CorpusProcess
 {
+    // Hazelcast mapping
+    private static Config cfg = new Config();
+    private static HazelcastInstance hi = Hazelcast.newHazelcastInstance(cfg);
     // Map of common words per sentence pair:<String,CountQR> (Word/token + counts)
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
+//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
     // Sentence similarity score
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = new HashMap<>();
+//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = new HashMap<>();
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = hi.getMap("QRscore");
     // Similarity score
     private static double                       score = 0.d;
     // Converged? flag
@@ -61,6 +70,8 @@ public class CorpusProcess
     // Language/Locale
     private final Setup                         setup;
     
+    private final Language                      l;
+
     
     /**
      * Constructor.
@@ -71,6 +82,9 @@ public class CorpusProcess
     {
         this.sents = sents;
         this.setup = setup;
+
+        // Setup language/locale            
+        l = setup.getLanguage();
     }
     
     /**
@@ -162,7 +176,12 @@ public class CorpusProcess
         
         // Tokenize and clean
         for( SentenceNode s: sents )
+        {
+            // 1. Remove OOB characters
+            s.updateSentence( l.remOOBChars(s.getSentence()) );
+            // Tokenize
             s.rawTokPosThisSentence(pme);
+        }
         
         return sents;
     }
@@ -187,7 +206,12 @@ public class CorpusProcess
             throw new EmptySentenceListException("Need sentences to process! Corpusprocess:lemmatizeSentenceCorpus");
         
         for( SentenceNode s: sents )
+        {
+            // 1. Remove OOB characters
+            s.updateSentence( l.remOOBChars(s.getSentence()) );
+            // Tokenize
             s.lemmatizeThisSentence(lemmer,match2NN);
+        }
         
         return sents;
     }
@@ -213,6 +237,9 @@ public class CorpusProcess
         
         for( SentenceNode s: sents )
         {
+            // 1. Remove OOB characters
+            s.updateSentence( l.remOOBChars(s.getSentence()) );
+            // Tokenize
             popl.lemmasOfSentence(s,match2NN);
         }
         
@@ -234,6 +261,10 @@ public class CorpusProcess
         
         for( SentenceNode s: sents )
         {
+            // 1. Remove OOB characters
+            s.updateSentence( l.remOOBChars(s.getSentence()) );
+
+            // Tokenize
             for( Token t: s.getTokens() )
             {
                 ps.setString(1, t.getToken());
@@ -266,31 +297,29 @@ public class CorpusProcess
         if( sents.isEmpty() )
             throw new EmptySentenceListException("Need sentences to process! CorpusProcess:cleanTokensSentenceCorpus");
         
-        // Setip language/locale            
-        Language l = setup.getLanguage();
-        
         // NB: Order is important!
         for( SentenceNode s: sents )
         {
-            // 1. Remove apostrophes (NB: based on language).  Note: generates more tokens
+            // 1. Remove OOB chars (before tokenization takes place)
+            // 2. Remove apostrophes (NB: based on language).  Note: generates more tokens
             List<Token> lts = l.unApostrophe(setup.loadApostrophesProperties(), s.getTokens());
             s.setTokens(lts);
 
-            // 2. All tokens now to lowercase and remove dashes, punctuation etc.
+            // 3. All tokens now to lowercase and remove dashes, punctuation etc.
             s.cleanTokens();
 
-            // 3. Remove stopwords
+            // 4. Remove stopwords
             lts = l.remStopWords(setup,lts);
             s.setTokens(lts);
 
-            // 4. Remove numbers
+            // 5. Remove numbers
             if( setup.getNoNumbers() )
                 { s.removeNumbers(s.getLocale()); }
             
-            // 5. Remove peculiarities (owing to eccentric tokenization)
+            // 6. Remove peculiarities (owing to eccentric tokenization)
             s.removeUnwanted();
 
-            // 6. Remove unwanted tokens (not matching POS tag list)
+            // 7. Remove unwanted tokens (not matching POS tag list)
             s.keepTokens(setup.getKeepNodes());
         }
         

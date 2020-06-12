@@ -26,7 +26,7 @@ public class Russian extends Language
     @Override
     public List<String> unApostrophe( Properties props, String[] tokens )
     {
-        throw new UnsupportedOperationException("Spanish");
+        throw new UnsupportedOperationException("Russian");
     }
     
     /**
@@ -39,6 +39,18 @@ public class Russian extends Language
     @Override
     public List<Token> unApostrophe( Properties props, List<Token> tokens )
     {
-        throw new UnsupportedOperationException("Spanish");
+        throw new UnsupportedOperationException("Russian");
+    }
+    
+    /**
+     * Ditch Out Of Band characters (such as " for degree secs in English).
+     * 
+     * @param doc
+     * @return 
+     */
+    @Override
+    public String remOOBChars( String doc )
+    {
+        throw new UnsupportedOperationException("Mandarin");
     }
 }

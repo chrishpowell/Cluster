@@ -90,12 +90,11 @@ public class Populate
      * @param doc
      * @return 
      */
-    public List<SentenceNode> extractSentences( String doc )
+    public List<SentenceNode> extractSentences( String doc, int idx )
     {
         List<SentenceNode> sents = new ArrayList<>();
         
         // Extract sentences (creating a unique name)
-        int idx = 0;
         for( String sent: sdme.sentDetect(doc) )
         {
             // Create a roughly unique name

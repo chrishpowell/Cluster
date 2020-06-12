@@ -5,13 +5,15 @@
  */
 package eu.discoveri.predikt.sentences;
 
+import java.io.Serializable;
+
 /**
  * Token count over sentence pairs.
  * 
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class CountQR
+public class CountQR implements Serializable
 {
     private int             q = 0, r = 0;
     private final String    qName, rName;

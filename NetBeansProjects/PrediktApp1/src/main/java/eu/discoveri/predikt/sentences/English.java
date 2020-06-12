@@ -9,6 +9,7 @@ import eu.discoveri.predikt.exceptions.TokensListIsEmptyException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 
 /**
@@ -18,6 +19,9 @@ import java.util.Properties;
  */
 public class English extends Language
 {
+    // Apostrophe strings match
+    static Pattern p = Pattern.compile("'*");
+     
     /**
      * Ditch apostrophes. Sentence should have been tokenized.
      * 
@@ -139,6 +143,11 @@ public class English extends Language
                                 updToks.add(new Token(props.getProperty("'"+stoks[idx])));
                         }
                         else
+                        if( p.matcher(stok).matches() )                         // Any number of '
+                        {
+                            // Do nothing, skip this token  @TODO: Improve this!!
+                        }
+                        else
                         { // Split as there may be multiple apostrophes
                             String[] stoks = stok.split("'");
                             updToks.add(new Token(stoks[0]));
@@ -157,5 +166,17 @@ public class English extends Language
         });
         
         return updToks;
+    }
+   
+    /**
+     * Ditch Out Of Band characters (such as " for degree secs in English?).
+     * 
+     * @param s
+     * @return 
+     */
+    @Override
+    public String remOOBChars( String s )
+    {
+        return s.replaceAll("null", "");
     }
 }

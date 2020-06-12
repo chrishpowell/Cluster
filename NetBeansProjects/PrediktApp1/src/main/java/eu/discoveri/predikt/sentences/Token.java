@@ -5,6 +5,7 @@ package eu.discoveri.predikt.sentences;
 import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.graph.GraphEntity;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,7 +20,7 @@ import java.util.stream.DoubleStream;
  * @param <Void>
  * @email info@astrology.ninja
  */
-public class Token <Void> extends GraphEntity implements Predicate<Void>
+public class Token <Void> extends GraphEntity implements Predicate<Void>, Serializable
 {
     private String          token;
     private String          stem;

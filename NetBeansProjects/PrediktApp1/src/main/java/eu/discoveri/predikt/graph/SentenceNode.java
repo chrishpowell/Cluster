@@ -202,6 +202,7 @@ public class SentenceNode extends AbstractVertex
 
 
     public String getSentence() { return sentence; }
+    public void updateSentence( String s ) { sentence = s; }
     public String getOrigText() { return origText; }
 
     public double getScore() { return score; }
@@ -274,24 +275,34 @@ public class SentenceNode extends AbstractVertex
     {
         // Ditch punctuation etc.
         sentence = clean(sentence);
+
         return sentence;
     }
     
     /**
      * Clean (input) tokens (normally for sentence not tokenised via method).
-     * Also remove "'s" from tokens.  ("is" is a stop word anyway and possession
-     * can be ignored).
+     * Ditch any nulls and also remove "'s" from tokens.  ("is" is a stop word
+     * anyway and possession can be ignored).
      * @return 
      */
     public List<Token> cleanTokens()
     {
-        tokens.forEach(t -> {
-            String tok = clean(t.getToken()).toLowerCase(locale);
+        for( Iterator<Token> t = tokens.iterator(); t.hasNext(); )
+        {
+            Token tokn = t.next();
+            String tok = tokn.getToken();
+            
+            if( tok == null || tok.isEmpty() )
+                t.remove();
+            else
+            {
+                tok = clean(tok.toLowerCase(locale));
 
-            if( tok.contains("'s") )
-                tok = tok.replaceAll("'s", "");
-            t.setToken(tok);
-        });
+                if( tok.contains("'s") )
+                    tok = tok.replaceAll("'s", "");
+                tokn.setToken(tok);
+            }
+        }
         
         return tokens;
     }
