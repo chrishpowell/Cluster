@@ -8,6 +8,8 @@ package eu.discoveri.predikt.sentences;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.MapStore;
 
 import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.EmptySentenceListException;
@@ -47,12 +49,13 @@ public class CorpusProcess
     // Hazelcast mapping
     private static Config cfg = new Config();
     private static HazelcastInstance hi = Hazelcast.newHazelcastInstance(cfg);
+
     // Map of common words per sentence pair:<String,CountQR> (Word/token + counts)
-//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
+//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
     // Sentence similarity score
-//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = new HashMap<>();
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = hi.getMap("QRscore");
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = new HashMap<>();
+//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = hi.getMap("QRscore");
     // Similarity score
     private static double                       score = 0.d;
     // Converged? flag
@@ -327,7 +330,8 @@ public class CorpusProcess
     }
     
     /**
-     * Same word/token counting per sentence pair.
+     * Token matching/counting per sentence pair.  Note Token class contains
+     * both token and lemma.
      * 
      * @return 
      * @throws EmptySentenceListException 
@@ -487,7 +491,8 @@ public class CorpusProcess
     }
     
     /**
-     * Same word/lemma counting per sentence pair.
+     * Lemma matching/counting per sentence pair.  Note Token class contains both
+     * token and lemma.
      * 
      * @return 
      * @throws EmptySentenceListException 
@@ -509,7 +514,7 @@ public class CorpusProcess
 
         /*
          * Count common words per sentence pair (Q,R).
-         * [Num sentence pairs = (sents.size*sents.size-1)/2.]
+         * [Num sentence pairs = sents.size*(sents.size-1)/2.]
          */
         // ---> For each sentence (Q) 'Source' sentence
         for( SentenceNode nodeQ: nodeList )
@@ -671,13 +676,21 @@ public class CorpusProcess
             v.forEach((w,c) -> {
                 // Number of times token/word appears across all sentences
                 double sft = tokSentCount.get(w).values().stream().count();
-                // Similarity score for this pair (k: <SentenceNode,SentenceNodeREDUNDANT>
+                // Similarity score for this pair (k: <SentenceNode,SentenceNode>
                 score += Math.log(c.getQ()+1.d)*Math.log(c.getR()+1.d)*Math.log((getSentences().size()+1.d)/(sft+0.5d));
             });
             
             // Store similarity score for each sentence pair
             QRscore.put(k, score);
         });
+    }
+    
+    /**
+     * Shutdown the HZC mapping
+     */
+    public void closeCorpusProcess()
+    {
+        Hazelcast.shutdownAll();
     }
     
     /**

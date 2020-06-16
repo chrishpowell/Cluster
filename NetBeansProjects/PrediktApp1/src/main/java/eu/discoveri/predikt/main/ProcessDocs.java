@@ -5,6 +5,8 @@
  */
 package eu.discoveri.predikt.main;
 
+
+import cwts.networkanalysis.Clustering;
 import eu.discoveri.louvaincluster.Clusters;
 import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.config.EnSetup;
@@ -15,13 +17,17 @@ import eu.discoveri.predikt.graph.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
 import eu.discoveri.predikt.graph.SentenceNodeService;
 import eu.discoveri.predikt.graph.Vertex;
+import eu.discoveri.predikt.graph.Corpi;
 import eu.discoveri.predikt.sentences.CorpusProcess;
+import eu.discoveri.instrumentation.InstrumentationAgent;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +77,152 @@ public class ProcessDocs
         return DriverManager.getConnection(URL,USER,PWD);
     }
     
+    /**
+     * Test sentences.
+     * 
+     * @return 
+     */
+    public static List<SentenceNode> getSentsOfList()
+    {
+        System.out.println("... Get sentences from test map");
+        return Corpi.getVertices();
+    }
     
+    /**
+     * Read sentences from database.
+     * 
+     * @param conn1
+     * @param popl
+     * @return
+     * @throws SQLException 
+     */
+    public static List<SentenceNode> getSentsOfDb( Connection conn1, Populate popl )
+            throws SQLException
+    {
+        System.out.println("... Get all documents from db");
+        PreparedStatement docs = conn1.prepareStatement("select * from Document");
+        ResultSet rsDocs = docs.executeQuery();
+        
+        // Get sentences of docs
+        System.out.println("... Form sentences of docs");
+        Stream.Builder<List<SentenceNode>> llsn = Stream.builder();
+        while( rsDocs.next() )
+        {
+            eIdx++;
+            List<SentenceNode> lsn = popl.extractSentences(rsDocs.getString("content"),eIdx);
+            llsn.add(lsn);
+        }
+        System.out.println("    > Num. documents: " +eIdx);
+        
+        // Merge to one list
+        System.out.println("... Form complete sentence list");
+        return llsn.build().flatMap(x -> x.stream()).collect(Collectors.toList());
+    }
+    
+    /**
+     * Form graph db edges from QRscores (nodeQ-nodeR edge weighting).
+     * 
+     * @param cp
+     * @return 
+     */
+    public static List<SentenceEdge> formEdges( CorpusProcess cp )
+    {
+        // Db service for edges
+        SentenceEdgeService ses = new SentenceEdgeService();
+        // Edges
+        List<SentenceEdge> ledges = new ArrayList<>();
+        
+        // Get all edges from QRscore and persist
+        cp.getQRscores().forEach((k,v) -> {
+//            System.out.println("-----> Weight edge "+k.getKey()+"-"+k.getValue()+": " +v);
+            if( v > Constants.EDGEWEIGHTMIN )
+            {
+                SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v);
+                ledges.add(se);
+                se.persist(ses);
+            }
+        });
+        
+        return ledges;
+    }
+    
+    /**
+     * Update Louvain on nodes.
+     * 
+     * @param lsents
+     * @param ledges 
+     */
+    public static void louvain( List<SentenceNode> lsents, List<SentenceEdge> ledges )
+    {
+        // Db service for nodes
+        SentenceNodeService sns = new SentenceNodeService();
+        
+        // Check for dups (multiple edges)
+        Map<Vertex,Long> vi = new HashMap<>();
+
+        // Set the Louvain index (for later clustering)
+        ledges.forEach(e -> {
+            Vertex v1 = e.getN1();
+            if( !vi.containsKey(v1) )
+            {
+                vi.put(v1, ++idx);
+                v1.setLouvainIdx(idx);
+            }
+
+            Vertex v2 = e.getN2();
+            if( !vi.containsKey(v2) )
+            {
+                vi.put(v2, ++idx);
+                v2.setLouvainIdx(idx);
+            }
+        });
+
+        // Nodes, update Louvain index
+        System.out.println("  > Update nodes with Louvain index");
+        lsents.forEach(s -> s.persist(sns));
+    }
+    
+    /**
+     * Generate Louvain clusters.  @TODO: To LouvainClsuter
+     * 
+     * @param numNodes
+     * @param ledges
+     * @return 
+     */
+    public static Clustering clustersGen( int numNodes, List<SentenceEdge> ledges )
+    {
+                // Edge and edge weights for Cluster library:
+        //   Num. nodes, edges[0][index]/edges[1][index], edgeWeights[index]
+        System.out.println("  > Edge weighting");
+        double[] edgeWeights = new double[ledges.size()];
+        int[][] edges = new int[2][ledges.size()];
+        ledges.forEach(e -> {
+//            System.out.println(""+e.getN1().getLouvainIdx()+"\t"+e.getN2().getLouvainIdx()+"\t"+e.getWeight());
+            edgeWeights[++eIdx] = e.getWeight();
+            edges[0][eIdx] = (int)e.getN1().getLouvainIdx();
+            edges[1][eIdx] = (int)e.getN2().getLouvainIdx();
+        });
+        
+        return Clusters.generate( numNodes, edges, edgeWeights );
+    }
+    
+    /**
+     * Instrumentation object size (useful?)
+     * @param object 
+     */
+    public static void printObjectSize(Object object)
+    {
+        System.out.println("Object type: " + object.getClass() +
+          ", size: " + InstrumentationAgent.getObjectSize(object) + " bytes");
+    }
+    
+    
+    /**
+     * M A I N
+     * =======
+     * @param args
+     * @throws Exception 
+     */
     public static void main(String[] args)
             throws Exception
     {
@@ -92,30 +243,10 @@ public class ProcessDocs
          * Process sentences
          * -----------------
          */
-        // Edges
-        List<SentenceEdge> ledges = new ArrayList<>();
-        
         // Get sentences from raw text
-//        List<SentenceNode> lsents = Corpi.getVertices();
+        List<SentenceNode> lsents = getSentsOfList();
         // Get sentences from document db
-        System.out.println("... Get all documents from db");
-        PreparedStatement docs = conn1.prepareStatement("select * from Document");
-        ResultSet rsDocs = docs.executeQuery();
-        
-        // Get sentences of docs
-        System.out.println("... Form sentences of docs");
-        Stream.Builder<List<SentenceNode>> llsn = Stream.builder();
-        while( rsDocs.next() )
-        {
-            eIdx++;
-            List<SentenceNode> lsn = popl.extractSentences(rsDocs.getString("content"),eIdx);
-            llsn.add(lsn);
-        }
-        System.out.println("    > Num. documents" +eIdx);
-        
-        // Merge to one list
-        System.out.println("... Form complete sentence list");
-        List<SentenceNode> lsents = llsn.build().flatMap(x -> x.stream()).collect(Collectors.toList());
+//        List<SentenceNode> lsents = getSentsOfDb( conn1, popl );
         System.out.println("    > Num. sentences: " +lsents.size());
         
         // Set up sentence analysis on above sentences/language/locale
@@ -135,11 +266,12 @@ public class ProcessDocs
         cp.lemmatizeSentenceCorpusViaDb(conn);
         
         // Now calculate common word count between sentences and
-        // do the token/lemma counting per sentence pair (QRscore) [Updates each sentence]
+        // do the token/lemma counting per sentence pair
         System.out.println("... Count lemmas");
         cp.countingLemmas();
         
-        // Calculate the similarity score between sentences (QRscore) [Updates each sentence]
+        // Calculate the similarity score between sentences.  Determines edge weights.
+        // (QRscore) [Updates each sentence]
         System.out.println("... Similarity calculation");
         cp.similarity();
         
@@ -147,13 +279,10 @@ public class ProcessDocs
          * Populate db (from corpus Maps)
          * ------------------------------
          */
-        System.out.println("... Build graph db");
+        System.out.println("\r\n... Build graph db");
         // Session
         DiscoveriSessionFactory discSess = DiscoveriSessionFactory.getInstance();
         Session sess = discSess.getSession();
-        // Db service
-        SentenceNodeService sns = new SentenceNodeService();
-        SentenceEdgeService ses = new SentenceEdgeService();
 
         // Clear database
         System.out.println("... Purge db");
@@ -161,57 +290,32 @@ public class ProcessDocs
 
         // Edges
         System.out.println("... Form edges and nodes");
-        cp.getQRscores().forEach((k,v) -> {
-//            System.out.println("-----> Weight edge ["+k.getKey()+"]-["+k.getValue()+"]: " +v);
-            if( v > Constants.EDGEWEIGHTMIN )
-            {
-                SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v);
-                ledges.add(se);
-                se.persist(ses);
-            }
-        });
+//        printObjectSize(cp.getQRscores());
+        List<SentenceEdge> ledges = formEdges( cp );
+//        System.out.println("    > Num. nodes: " +lsents.size()+ ", num. edges: " +ledges.size());
         
-        // Dump nodes/edges for cluster analysis
+        /*
+         * Clustering
+         * ----------
+         */
+        // Get nodes/edges for Louvain (cluster) analysis and update nodes
         System.out.println("... Louvain clustering");
-        Map<Vertex,Long> vi = new HashMap<>();
-        System.out.println("Num. nodes: " +lsents.size()+ ", num. edges: " +ledges.size());
-        ledges.forEach(e -> {
-            Vertex v1 = e.getN1();
-            if( !vi.containsKey(v1) )
-            {
-                vi.put(v1, ++idx);
-                v1.setLouvainIdx(idx);
-            }
-
-            Vertex v2 = e.getN2();
-            if( !vi.containsKey(v2) )
-            {
-                vi.put(v2, ++idx);
-                e.getN2().setLouvainIdx(idx);
-            }
-        });
-        
-        // Edge and edge weights
-        System.out.println("... Edge weighting");
-        double[] edgeWeights = new double[ledges.size()];
-        int[][] edges = new int[2][ledges.size()];
-        ledges.forEach(e -> {
-            System.out.println(""+e.getN1().getLouvainIdx()+"\t"+e.getN2().getLouvainIdx()+"\t"+e.getWeight());
-            edgeWeights[++eIdx] = e.getWeight();
-            edges[0][eIdx] = (int)e.getN1().getLouvainIdx();
-            edges[1][eIdx] = (int)e.getN2().getLouvainIdx();
-        });
-        
-        // Nodes, update Louvain index
-        System.out.println("... Update nodes");
-        lsents.forEach(s -> s.persist(sns));
+        louvain( lsents, ledges );
         
         // Clustering
         System.out.println("... Generate sentence clusters");
-        Clusters.generate(lsents.size(), edges, edgeWeights);
+        Clustering c = clustersGen( lsents.size(), ledges );
+        
+        System.out.println("  > Num. clusters: " +c.getNClusters());
+        int[][] npc = c.getNodesPerCluster();
+        System.out.println(Arrays.deepToString(npc));
+        
+        // Update db with clusters
+        // ...
+        System.out.println("... Update graph db with cluster info (TBD)");
         
         // Close
-        System.out.println("");
+        System.out.println("\r\n... Closing");
         discSess.close();
         conn.close();
         conn1.close();

@@ -77,7 +77,7 @@ public class Corpi
     
     public static List<SentenceNode> getVertices()
     {
-        return sents;
+        return sents9;
     }
     
     public static String getTestDoc()
