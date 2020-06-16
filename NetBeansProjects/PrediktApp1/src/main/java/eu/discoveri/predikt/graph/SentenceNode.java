@@ -56,29 +56,32 @@ import org.neo4j.ogm.annotation.Relationship;
 @NodeEntity
 public class SentenceNode extends AbstractVertex
 {
+    // Serialization
+    private static final long   serialVersionUID = 111L;
+    
     // Basic attrs
-    private String          origText = "";
-    private String          sentence = "";
+    private String              origText = "";
+    private String              sentence = "";
     // Scoring for this node
-    private double          score = 0.d, prevScore = 0.d;
-    private List<Token>     tokens;
+    private double              score = 0.d, prevScore = 0.d;
+    private List<Token>         tokens;
     
     // Language/Locale
-    private LangCode        langCode;
-    private Locale          locale;
+    private LangCode            langCode;
+    private Locale              locale;
     
     // Subgraph label
-    private String          subgraph = null;
+    private String              subgraph = null;
     
     // Distance
-    private double          dist = Double.MAX_VALUE;
+    private double              dist = Double.MAX_VALUE;
     // Between
-    private double          between = 0.d, cbetween = 0.d;
+    private double              between = 0.d, cbetween = 0.d;
     // Shortest paths (will be changed by edge weight)
-    private double          spath = 0.d;
+    private double              spath = 0.d;
     // 'Prev.' node along path
     @Relationship(type="PREV")
-    private SentenceNode    prev = null;
+    private SentenceNode        prev = null;
 
     // Predecessors
     private List<SentenceNode>      preds = new ArrayList<>();

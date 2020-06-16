@@ -8,8 +8,6 @@ package eu.discoveri.predikt.sentences;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
-import com.hazelcast.map.MapStore;
 
 import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.EmptySentenceListException;
