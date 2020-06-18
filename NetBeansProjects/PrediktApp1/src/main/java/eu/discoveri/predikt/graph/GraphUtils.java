@@ -5,6 +5,8 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.graph.service.SentenceEdgeService;
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

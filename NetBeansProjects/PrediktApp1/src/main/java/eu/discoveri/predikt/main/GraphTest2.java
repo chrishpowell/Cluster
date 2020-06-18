@@ -9,8 +9,8 @@ import eu.discoveri.predikt.graph.Adjacency;
 import eu.discoveri.predikt.graph.CDs;
 import eu.discoveri.predikt.graph.GraphUtils;
 import eu.discoveri.predikt.graph.SentenceNode;
-import eu.discoveri.predikt.graph.SentenceNodeService;
-import eu.discoveri.predikt.graph.SentenceEdgeService;
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
+import eu.discoveri.predikt.graph.service.SentenceEdgeService;
 import eu.discoveri.predikt.graph.Vertex;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
 

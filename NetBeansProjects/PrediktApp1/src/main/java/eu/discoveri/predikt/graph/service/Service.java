@@ -3,7 +3,11 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited.
  * Proprietary and confidential.
  */
-package eu.discoveri.predikt.graph;
+package eu.discoveri.predikt.graph.service;
+
+import eu.discoveri.predikt.graph.GraphEntity;
+import java.util.Map;
+import org.neo4j.ogm.model.Result;
 
 
 /**
@@ -12,11 +16,15 @@ package eu.discoveri.predikt.graph;
  */
 interface Service<T extends GraphEntity>
 {
-    public Iterable<T> findAll();
-
     public T find(Long id);
 
+    public Iterable<T> findAll();
+    
+    public Result findByCypher( String cypher, Map<String,?> parameters );
+
     public void delete(Long id);
+    
+    public void deleteByCypher( String cypher, Map<String,?> parameters );
 
     public T createOrUpdate(T object);
 }

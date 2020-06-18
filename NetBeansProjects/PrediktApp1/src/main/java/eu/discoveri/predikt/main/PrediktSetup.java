@@ -10,9 +10,9 @@ import eu.discoveri.predikt.graph.Corpi;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
 import eu.discoveri.predikt.graph.Populate;
 import eu.discoveri.predikt.graph.SentenceEdge;
-import eu.discoveri.predikt.graph.SentenceEdgeService;
+import eu.discoveri.predikt.graph.service.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
-import eu.discoveri.predikt.graph.SentenceNodeService;
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import eu.discoveri.predikt.sentences.CorpusProcess;
 //import eu.discoveri.lemmas.db.LemmaDbBuild;
 

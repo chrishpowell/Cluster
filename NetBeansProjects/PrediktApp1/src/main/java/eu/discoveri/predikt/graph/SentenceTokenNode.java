@@ -5,6 +5,7 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.graph.service.SentenceTokenNodeService;
 import eu.discoveri.predikt.sentences.Token;
 import java.util.HashMap;
 import java.util.List;

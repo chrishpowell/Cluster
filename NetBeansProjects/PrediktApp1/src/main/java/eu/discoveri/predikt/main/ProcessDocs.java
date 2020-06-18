@@ -6,6 +6,7 @@
 package eu.discoveri.predikt.main;
 
 
+import com.hazelcast.core.Hazelcast;
 import cwts.networkanalysis.Clustering;
 import eu.discoveri.louvaincluster.Clusters;
 import eu.discoveri.predikt.config.Constants;
@@ -13,9 +14,9 @@ import eu.discoveri.predikt.config.EnSetup;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
 import eu.discoveri.predikt.graph.Populate;
 import eu.discoveri.predikt.graph.SentenceEdge;
-import eu.discoveri.predikt.graph.SentenceEdgeService;
+import eu.discoveri.predikt.graph.service.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
-import eu.discoveri.predikt.graph.SentenceNodeService;
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import eu.discoveri.predikt.graph.Vertex;
 import eu.discoveri.predikt.graph.Corpi;
 import eu.discoveri.predikt.sentences.CorpusProcess;
@@ -316,6 +317,7 @@ public class ProcessDocs
         
         // Close
         System.out.println("\r\n... Closing");
+        Hazelcast.shutdownAll();
         discSess.close();
         conn.close();
         conn1.close();

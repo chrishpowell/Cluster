@@ -5,6 +5,7 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.graph.service.SentenceEdgeService;
 import org.neo4j.driver.Query;
 import static org.neo4j.driver.Values.parameters;
 import org.neo4j.ogm.annotation.Property;

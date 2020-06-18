@@ -6,6 +6,7 @@
 package eu.discoveri.predikt.graph;
 
 
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import eu.discoveri.predikt.exceptions.ListLengthsDifferException;
 import eu.discoveri.predikt.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.predikt.exceptions.SentenceIsEmptyException;

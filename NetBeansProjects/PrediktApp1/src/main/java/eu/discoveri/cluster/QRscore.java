@@ -7,9 +7,12 @@ package eu.discoveri.cluster;
 
 import eu.discoveri.predikt.graph.GraphEntity;
 import eu.discoveri.predikt.graph.SentenceNode;
+import eu.discoveri.predikt.graph.service.QRscoreService;
 import java.io.Serializable;
+import java.util.Map;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.model.Result;
 
 /**
  *
