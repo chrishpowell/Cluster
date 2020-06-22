@@ -8,6 +8,7 @@ package eu.discoveri.predikt.sentences;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import eu.discoveri.predikt.cluster.QRscore;
 
 import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.EmptySentenceListException;
@@ -52,8 +53,8 @@ public class CorpusProcess
     private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
 //    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
     // Sentence similarity score
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = new HashMap<>();
-//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               QRscore = hi.getMap("QRscore");
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,QRscore>              qrScore = new HashMap<>();
+//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               qrScore = hi.getMap("qrScore");
     // Similarity score
     private static double                       score = 0.d;
     // Converged? flag
@@ -665,7 +666,7 @@ public class CorpusProcess
         if( tokSentCount.isEmpty() )
             throw new TokensCountInSentencesIsZeroException("Need tokens to process! CorpusProcess:similarity()");
                     
-        // Get scores into QRscore.
+        // Get scores into qrScore.
         commonWords.forEach((k,v) -> {
             // Init score
             score = 0.d;
@@ -679,7 +680,7 @@ public class CorpusProcess
             });
             
             // Store similarity score for each sentence pair
-            QRscore.put(k, score);
+            qrScore.put(k, new QRscore(k.getKey(),k.getValue(),score));
         });
     }
     
@@ -771,9 +772,9 @@ public class CorpusProcess
      * 
      * @return 
      */
-    public Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double> getQRscores()
+    public Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,QRscore> getQRscores()
     {
-        return QRscore;
+        return qrScore;
     }
     
     /**
@@ -826,12 +827,12 @@ public class CorpusProcess
     {
         if( !full )
         {
-            QRscore.forEach((k,v) -> {
+            qrScore.forEach((k,v) -> {
                 System.out.println("Pair: " +k.getKey().getName()+"/"+k.getValue().getName() +", Score: " +v);
             });
         }
         else
-            QRscore.forEach((k,v) -> {
+            qrScore.forEach((k,v) -> {
                 System.out.format("Pair> Q:(" +k.getKey().getName()+")/R:("+k.getValue().getName() +"), SimScore: %9.5f%n",v);
                 System.out.println("   Sentence Q: " +k.getKey().getSentence());
                 System.out.println("   Sentence R: " +k.getValue().getSentence());

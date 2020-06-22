@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
+import org.neo4j.ogm.annotation.NodeEntity;
 
 
 /**
@@ -16,6 +17,7 @@ import org.neo4j.ogm.annotation.Id;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
+@NodeEntity
 public abstract class GraphEntity
 {
     // This can be reused by neo4j
@@ -24,6 +26,7 @@ public abstract class GraphEntity
     
     // Unique ref.
     private UUID    uuid;
+    private String  sUUID;
     
     // Namespace and name
     private String  namespace;
@@ -40,19 +43,26 @@ public abstract class GraphEntity
         this.name = name;
         this.namespace = namespace;
         this.uuid = UUID.nameUUIDFromBytes((namespace+name).getBytes());
+        this.sUUID = uuid.toString();
     }
     
     /**
      * Constructor.
      * Default values.
      */
-    public GraphEntity()
-    {
-        this( "","eu.discoveri" );
-    }
+    public GraphEntity(){}
     
+    
+    /*
+     * Getters
+     */
     public Long getNid() { return nid; }
     public UUID getUUID() { return uuid; }
+    /**
+     * String version UUID (for Neo4j storage)
+     * @return 
+     */
+    public String getSUUID(){ return sUUID; }
 
     public String getNamespace() { return namespace; }
     public String getName() { return name; }

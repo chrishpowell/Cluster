@@ -8,19 +8,22 @@ package eu.discoveri.predikt.graph.service;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
 import eu.discoveri.predikt.graph.GraphEntity;
 
-import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.Map;
-import org.neo4j.ogm.model.Result;
+
+import org.neo4j.ogm.cypher.ComparisonOperator;
+import org.neo4j.ogm.cypher.Filter;
 import org.neo4j.ogm.session.Session;
 
 
 /**
  *
  * @author Chris Powell, Discoveri OU
+ * @param <K> Key (for finding by key)
  * @param <T> Any class extending GraphEntity
  * @email info@astrology.ninja
  */
-public abstract class EntityService<T extends GraphEntity> implements Service<T>
+public abstract class EntityService<K,T extends GraphEntity> implements Service<K,T>
 {
     // Load depth, here just entity simple properties, no relationships
     // Default: 1, load simple properties of the entity and its immediate relations.
@@ -36,6 +39,13 @@ public abstract class EntityService<T extends GraphEntity> implements Service<T>
     {
         return session.load(getEntityType(), id, DEPTH_ENTITY);
     }
+    
+    @Override
+    public Collection<T> findByKey( String keyName, K key )
+    {
+        Filter filter = new Filter(keyName,ComparisonOperator.EQUALS,key);
+        return session.loadAll(getEntityType(), filter);
+    }
 
     @Override
     public Iterable<T> findAll()
@@ -44,9 +54,9 @@ public abstract class EntityService<T extends GraphEntity> implements Service<T>
     }
     
     @Override
-    public Result findByCypher( String cypher, Map<String,?> params )
+    public Iterable<T> findByCypher( String cypher, Map<String,?> params )
     {
-        return session.query(cypher, params);
+        return session.query(getEntityType(), cypher, params);
     }
 
     @Override
@@ -64,7 +74,7 @@ public abstract class EntityService<T extends GraphEntity> implements Service<T>
     @Override
     public T createOrUpdate(T entity)
     {
-        Annotation[] ann = entity.getClass().getAnnotations();
+        System.out.println("Saving: " +entity.getName());
         session.save(entity, DEPTH_ENTITY);
         return find(entity.getNid());
     }

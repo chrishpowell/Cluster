@@ -13,7 +13,7 @@ import eu.discoveri.predikt.graph.SentenceEdge;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class SentenceEdgeService extends EntityService<SentenceEdge>
+public class SentenceEdgeService extends EntityService<String,SentenceEdge>
 {
     // See EntityService for bulk of methods
     

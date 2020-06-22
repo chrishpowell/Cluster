@@ -6,21 +6,23 @@
 package eu.discoveri.predikt.graph.service;
 
 import eu.discoveri.predikt.graph.GraphEntity;
+import java.util.Collection;
 import java.util.Map;
-import org.neo4j.ogm.model.Result;
 
 
 /**
  *
  * @author Chris Powell, Discoveri OU
  */
-interface Service<T extends GraphEntity>
+interface Service<K, T extends GraphEntity>
 {
     public T find(Long id);
+    
+    public Collection<T> findByKey( String keyName, K key );
 
     public Iterable<T> findAll();
     
-    public Result findByCypher( String cypher, Map<String,?> parameters );
+    public Iterable<T> findByCypher( String cypher, Map<String,?> parameters );
 
     public void delete(Long id);
     

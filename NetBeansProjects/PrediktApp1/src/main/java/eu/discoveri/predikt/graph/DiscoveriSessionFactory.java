@@ -23,7 +23,7 @@ public class DiscoveriSessionFactory
                                                         .uri("bolt://localhost")
                                                         .credentials("neo4j", "karabiner")
                                                         .build();
-    private static final SessionFactory sessionFactory = new SessionFactory(configuration, Constants.PKGGRAPH,Constants.PKGSENTS);
+    private static final SessionFactory sessionFactory = new SessionFactory(configuration, Constants.PKGGRAPH,Constants.PKGSENTS,Constants.PKGCLUSTER);
     private static final DiscoveriSessionFactory inst = new DiscoveriSessionFactory();
 
     public static DiscoveriSessionFactory getInstance()

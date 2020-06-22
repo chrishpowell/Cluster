@@ -6,12 +6,12 @@
 package eu.discoveri.predikt.graph;
 
 
-import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import eu.discoveri.predikt.exceptions.ListLengthsDifferException;
 import eu.discoveri.predikt.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.predikt.exceptions.SentenceIsEmptyException;
 import eu.discoveri.predikt.exceptions.TokensListIsEmptyException;
 
+import eu.discoveri.predikt.graph.service.SentenceNodeService;
 import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.sentences.Token;
 import eu.discoveri.predikt.lemmatizer.Lemmatizer;
@@ -44,7 +44,6 @@ import opennlp.tools.util.Span;
 
 import org.neo4j.driver.Query;
 import static org.neo4j.driver.Values.parameters;
-import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Properties;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -54,7 +53,6 @@ import org.neo4j.ogm.annotation.Relationship;
  * @author Chris Powell, Discoveri OU
  * @email info@discoveri.eu
  */
-@NodeEntity
 public class SentenceNode extends AbstractVertex
 {
     // Serialization
@@ -889,7 +887,7 @@ public class SentenceNode extends AbstractVertex
         if(other == null) { return false; }
         if( getClass() != other.getClass() ) { return false; }
         
-        return this.getUUID().equals(other.getUUID());
+        return this.getSUUID().equals(other.getSUUID());
     }
     
     /**

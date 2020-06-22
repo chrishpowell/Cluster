@@ -13,7 +13,7 @@ import eu.discoveri.predikt.graph.SentenceTokenNode;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class SentenceTokenNodeService extends EntityService<SentenceTokenNode>
+public class SentenceTokenNodeService extends EntityService<Long,SentenceTokenNode>
 {
     // See EntityService for bulk of methods
     

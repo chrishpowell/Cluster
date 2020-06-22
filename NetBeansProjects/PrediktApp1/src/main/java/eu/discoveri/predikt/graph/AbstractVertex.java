@@ -96,10 +96,12 @@ public abstract class AbstractVertex extends GraphEntity implements Vertex, Seri
      * Get Louvain algo index.
      * @return 
      */
+    @Override
     public long getLouvainIdx() { return louvainIdx; }
     /**
      * Set Louvain algo index.
      * @param louvainIdx 
      */
+    @Override
     public void setLouvainIdx(long louvainIdx) { this.louvainIdx = louvainIdx; }
 }

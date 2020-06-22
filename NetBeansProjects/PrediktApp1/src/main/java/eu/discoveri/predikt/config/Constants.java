@@ -75,6 +75,7 @@ public class Constants
     // Neo4J packages required for SessionFactory
     public static final String      PKGGRAPH = DEFNS+".graph";
     public static final String      PKGSENTS = DEFNS+".sentences";
+    public static final String      PKGCLUSTER = DEFNS +".cluster";
     
     // Text Ranking parameters
     public static final double      TEXTRANK_DAMPING_FACTOR = 0.85D;

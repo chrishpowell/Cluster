@@ -13,7 +13,7 @@ import eu.discoveri.predikt.cluster.QRscore;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class QRscoreService extends EntityService<String,QRscore>
+public class CommonWordsService extends EntityService<String,QRscore>
 {
     // See EntityService for bulk of methods
     

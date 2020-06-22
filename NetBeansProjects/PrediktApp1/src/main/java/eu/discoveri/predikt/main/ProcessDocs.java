@@ -8,6 +8,7 @@ package eu.discoveri.predikt.main;
 
 import com.hazelcast.core.Hazelcast;
 import cwts.networkanalysis.Clustering;
+
 import eu.discoveri.louvaincluster.Clusters;
 import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.config.EnSetup;
@@ -29,11 +30,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.neo4j.ogm.model.Result;
 
 import org.neo4j.ogm.session.Session;
 
@@ -77,6 +81,58 @@ public class ProcessDocs
         
         return DriverManager.getConnection(URL,USER,PWD);
     }
+    
+    /**
+     * Drop all constraints and indexes.
+     * @param sess 
+     */
+    public static void dropIndexes( Session sess )
+    {
+        // Constraints
+        Result res = sess.query("CALL db.constraints", Collections.EMPTY_MAP);
+        Iterator<Map<String,Object>> iter = res.iterator();
+        while( iter.hasNext() )
+        {
+            Map<String,Object> sn = iter.next();
+            sn.entrySet().forEach(v -> {
+                if( v.getKey().equals("name") )
+                    sess.query( "drop constraint "+v.getValue(), Collections.EMPTY_MAP );
+            });
+        }
+        
+        // Indexes
+        res = sess.query("CALL db.indexes", Collections.EMPTY_MAP);
+        iter = res.iterator();
+        while( iter.hasNext() )
+        {
+            Map<String,Object> sn = iter.next();
+            sn.entrySet().forEach(v -> {
+                if( v.getKey().equals("name") )
+                    sess.query("drop index "+v.getValue(), Collections.EMPTY_MAP);
+            });
+        }
+    }
+    
+    /**
+     * QRscore index.
+     * @param sess 
+     */
+    public static void indexQRscore( Session sess )
+    {
+        sess.query("create index qrsIdx for (q:QRscore) on (q.node1,q.node2)", Collections.EMPTY_MAP);
+        sess.query("create constraint on (c:QRscore) assert c.qrsIdx is unique", Collections.EMPTY_MAP);
+    }
+    
+    /**
+     * Commonwords index.
+     * @param sess 
+     */
+    public static void indexCWs( Session sess )
+    {
+//        sess.query("create index qrsIdx for (q:QRscore) on (q.node1,q.node2)", Collections.EMPTY_MAP);
+//        sess.query("create constraint on (c:QRscore) assert c.qrsIdx is unique", Collections.EMPTY_MAP);
+    }
+            
     
     /**
      * Test sentences.
@@ -136,9 +192,9 @@ public class ProcessDocs
         // Get all edges from QRscore and persist
         cp.getQRscores().forEach((k,v) -> {
 //            System.out.println("-----> Weight edge "+k.getKey()+"-"+k.getValue()+": " +v);
-            if( v > Constants.EDGEWEIGHTMIN )
+            if( v.getScore() > Constants.EDGEWEIGHTMIN )
             {
-                SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v);
+                SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v.getScore());
                 ledges.add(se);
                 se.persist(ses);
             }
@@ -288,9 +344,17 @@ public class ProcessDocs
         // Clear database
         System.out.println("... Purge db");
         sess.purgeDatabase();
+        
+        // Drop and create indexes
+        System.out.println("    > Drop and create indexes");
+        dropIndexes( sess );
+        // QRscore index
+        indexQRscore( sess );
+        // Commonwords index
+        //indexCWs( sess )
 
         // Edges
-        System.out.println("... Form edges and nodes");
+        System.out.println("... Form edges and nodes from Sentences");
 //        printObjectSize(cp.getQRscores());
         List<SentenceEdge> ledges = formEdges( cp );
 //        System.out.println("    > Num. nodes: " +lsents.size()+ ", num. edges: " +ledges.size());
