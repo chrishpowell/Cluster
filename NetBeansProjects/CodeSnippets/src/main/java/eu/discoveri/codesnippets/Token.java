@@ -23,5 +23,6 @@ public class Token
     }
     
     public String getToken() { return name; }
+    public void setToken(String token) { this.name = token; }
     public String getLemma() { return lemma; }
 }

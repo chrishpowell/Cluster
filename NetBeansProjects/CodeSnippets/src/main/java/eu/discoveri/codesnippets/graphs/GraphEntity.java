@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
-import org.neo4j.ogm.annotation.Property;
 
 
 /**
@@ -28,7 +27,6 @@ public abstract class GraphEntity
     
     // Namespace and name
     private String  namespace;
-    @Property
     private String  name;
     
 
@@ -37,12 +35,13 @@ public abstract class GraphEntity
      * @param name
      * @param namespace 
      */
-    public GraphEntity( String namespace, String name )
+    public GraphEntity( String name, String namespace )
     {
         this.name = name;
         this.namespace = namespace;
         this.uuid = UUID.nameUUIDFromBytes((namespace+name).getBytes());
     }
+    
     /**
      * Constructor.
      * Default values.

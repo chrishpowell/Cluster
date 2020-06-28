@@ -3,16 +3,11 @@
 package eu.discoveri.codesnippets.graphs;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
-
-import org.neo4j.ogm.annotation.Properties;
-
 
 /**
  *
@@ -22,7 +17,7 @@ import org.neo4j.ogm.annotation.Properties;
  */
 public class Token <Void> extends GraphEntity implements Predicate<Void>
 {
-    private final String    token;
+    private String          token;
     private String          stem;
     private String          lemma;
     private String          pos ="0X0X";
@@ -36,7 +31,7 @@ public class Token <Void> extends GraphEntity implements Predicate<Void>
      */
     public Token(String token)
     {
-        super("tiktok",token);
+        super("eu.discoveri",token);
         this.token = token;
     }
 
@@ -90,6 +85,7 @@ public class Token <Void> extends GraphEntity implements Predicate<Void>
      * @return 
      */
     public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 
     /**
      * Get the stem.

@@ -6,6 +6,8 @@
 package eu.discoveri.codesnippets.graph;
 
 import eu.discoveri.codesnippets.graphs.GraphEntity;
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
 import org.neo4j.ogm.session.Session;
 
 
@@ -47,6 +49,9 @@ public abstract class GenericService<T extends GraphEntity> implements Service<T
     @Override
     public T createOrUpdate(T entity)
     {
+        System.out.println("Entity: " +entity.getClass().getPackageName()+":"+entity.getClass().getName());
+        Annotation[] ann = entity.getClass().getAnnotations();
+        Arrays.stream(ann).forEach(a -> System.out.println("   has annotations: " +a.toString()));
         session.save(entity, DEPTH_ENTITY);
         return find(entity.getNid());
     }

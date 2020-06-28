@@ -92,6 +92,11 @@ public class SentenceNode extends AbstractVertex
         this("eu.discoveri.predikt",name,sentence,tokens,score);
     }
     
+    public SentenceNode(String name, String sentence)
+    {
+        this("eu.discoveri.predikt",name,sentence,new ArrayList<String>(),0.d);
+    }
+    
     /**
      * No arg constructor for loading from db.
      */

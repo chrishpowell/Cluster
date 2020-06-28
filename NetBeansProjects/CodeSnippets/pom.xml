@@ -14,12 +14,12 @@
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-            <version>4.0.0</version>
+            <version>4.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-ogm-core</artifactId>
-            <version>3.2.10</version>
+            <version>3.2.11</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.neo4j/neo4j-ogm-bolt-driver -->
         <dependency>
@@ -38,6 +38,16 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>3.6.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>Instrumentation</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 </project>

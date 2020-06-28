@@ -7,6 +7,7 @@ package eu.discoveri.codesnippets.graph;
 
 import eu.discoveri.codesnippets.graphs.SentenceTokenNode;
 import eu.discoveri.codesnippets.graphs.SentenceTokenNodeService;
+
 import org.neo4j.ogm.session.Session;
 
 

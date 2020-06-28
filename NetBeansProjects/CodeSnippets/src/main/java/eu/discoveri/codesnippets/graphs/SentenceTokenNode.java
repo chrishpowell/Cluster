@@ -73,32 +73,5 @@ public class SentenceTokenNode extends AbstractVertex
         if( getClass() != other.getClass() ) { return false; }
         
         return this.getUUID().equals(other.getUUID());
-    }
-//
-//    @Override
-//    public int hashCode() {
-//        int hash = 7;
-//        hash = 23 * hash + Objects.hashCode(this.sentence);
-//        return hash;
-//    }
-//
-//    @Override
-//    public boolean equals(Object obj) {
-//        if (this == obj) {
-//            return true;
-//        }
-//        if (obj == null) {
-//            return false;
-//        }
-//        if (getClass() != obj.getClass()) {
-//            return false;
-//        }
-//        final SentenceTokenNode other = (SentenceTokenNode) obj;
-//        if (!Objects.equals(this.sentence, other.sentence)) {
-//            return false;
-//        }
-//        return true;
-//    }
-    
-    
+    } 
 }

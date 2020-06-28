@@ -31,9 +31,14 @@ public abstract class AbstractVertex extends GraphEntity implements Vertex
     private List<Adjacency> adjs = new ArrayList<>();
     
     
-    public AbstractVertex( String namespace, String name )
+    /**
+     * Constructor.
+     * @param name
+     * @param namespace 
+     */
+    public AbstractVertex( String name, String namespace )
     {
-        super(namespace,name);
+        super(name,namespace);
     }
     
     /**
