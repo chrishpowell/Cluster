@@ -8,10 +8,13 @@ package eu.discoveri.predikt.tests;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigBuilder;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.core.DistributedObject;
+import com.hazelcast.map.IMap;
 import eu.discoveri.predikt.cluster.CommonWordsMS;
 
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
@@ -19,9 +22,12 @@ import eu.discoveri.predikt.graph.SentenceNode;
 import eu.discoveri.predikt.graph.service.QRscoreService;
 import eu.discoveri.predikt.cluster.QRscore;
 import eu.discoveri.predikt.cluster.QRscoreMS;
+import eu.discoveri.predikt.graph.service.CommonWordsService;
 import eu.discoveri.predikt.sentences.CountQR;
 
 import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,25 +44,28 @@ import org.neo4j.ogm.session.Session;
 public class GetSentences
 {
         // Hazelcast mapping
-    private static Config cfg = new Config("qrScore");
-    private static HazelcastInstance hi = Hazelcast.newHazelcastInstance(cfg);
+    private static Config dCfg = discoveriConfig();
+    private static HazelcastInstance hi = Hazelcast.newHazelcastInstance(dCfg);
     // Store backed map
 //    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Iterable<QRscore>>  qrScore = hi.getMap("qrScore");
 //    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
     
     /**
-     * Hazelcast config (Db backed maps)
-     * @param mapNames
+     * Hazelcast config (Db backed maps).  Convoluted way of getting MapStoreConfig
+     * into (HZC) Config. See HZC Class Config and xmlConfigBuilder.
      * @return 
      */
-    public static Config discoveriConfig( List<String> mapNames )
+    public static Config discoveriConfig()
     {
-        MapStoreConfig ms1 = new MapStoreConfig(), ms2 = new MapStoreConfig();
-        ms1.setImplementation(new QRscoreMS(new QRscoreService()));
-        ms2.setImplementation(new CommonWordsMS());
-        
-        ConfigBuilder cfgBuilder = new XmlConfigBuilder();
-        Config cfg = cfgBuilder.build();
+        MapStoreConfig msCfg = new MapStoreConfig(), msCfg1 = new MapStoreConfig();
+        // Two maps method?
+        msCfg.setImplementation(new QRscoreMS(new QRscoreService())).setClassName("eu.discoveri.predikt.cluster.QRscoreMS");
+        msCfg1.setImplementation(new CommonWordsMS(new CommonWordsService()));
+    
+        Config cfg = new Config("qrScore");
+        MapConfig mapCfg = new MapConfig("qrCount");
+        mapCfg.setMapStoreConfig(msCfg);
+        cfg.addMapConfig(mapCfg);
         
         return cfg;
     }
@@ -67,11 +76,25 @@ public class GetSentences
         String name = "S*", namespace = "eu.discoveri.predikt";
         System.out.println("*** Getting key: " +name+ "-" +namespace);
 
-        // Session
+        // Session for Neo4j
         DiscoveriSessionFactory discSess = DiscoveriSessionFactory.getInstance();
-        Session sess = discSess.getSession();
+        Session sess = discSess.getNewSession();
         
-        System.out.println("Num nodes: " +sess.countEntitiesOfType(SentenceNode.class));
+        System.out.println("Num SentenceNodes: " +sess.countEntitiesOfType(SentenceNode.class));
+        
+        System.out.println("===> Name: " +hi.getName());
+        Map<String,MapConfig> dms = dCfg.getMapConfigs();
+        dms.forEach((n,m) -> {
+            System.out.println("--> MapConfig: " +n);
+            System.out.println("   MapStoreConfig: " +m.getMapStoreConfig().getClassName());
+            });
+
+        IMap<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Iterable<QRscore>> qMap = hi.getMap("qrCount");
+        Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Iterable<QRscore>> qMap1 = new HashMap<>();
+        
+                
+//        Collection<DistributedObject> dObjs = hi.getDistributedObjects();
+//        dObjs.forEach(dObj -> System.out.println("===> dObj: " +dObj.getName()));
         
 //
 //... DOESN'T WORK!!
@@ -90,24 +113,23 @@ public class GetSentences
 //            System.out.println(" Cypher>" +s.getName()+ ", score: " +s.getScore());
 //        });
 
-        // Neo4j backed map
-        QRscoreMS qrsMS = new QRscoreMS( new QRscoreService() );
-
+//        // Neo4j backed map
+//        QRscoreMS qrsMS = new QRscoreMS( new QRscoreService() );
+//
         // Filter version
         Filter filter = new Filter("name",ComparisonOperator.LIKE,name);
         Iterable<SentenceNode> sns = sess.loadAll(SentenceNode.class, filter);
         sns.forEach(s1 -> {
-            System.out.println(" Filter>" +s1.getName()+ ", UUID: " +s1.getSUUID());
             sns.forEach(s2 -> {
-                System.out.println("    Inner: " +s2.getName()+ ", UUID: " +s2.getSUUID());
                 if( !s1.equals(s2) )
                 {
-                    qrsMS.store( new AbstractMap.SimpleEntry<>(s1,s2), List.of(new QRscore(s1,s2,s1.getScore()*s2.getScore())) );
+                    System.out.println(" Outer: "+s1.getName()+", Inner: " +s2.getName());
+                    qMap.put( new AbstractMap.SimpleEntry<>(s1,s2), List.of(new QRscore(s1,s2,s1.getScore()*s2.getScore())) );
                 }
             });
         });
         
-        
+        Hazelcast.shutdownAll();
         discSess.close();
     }
 }

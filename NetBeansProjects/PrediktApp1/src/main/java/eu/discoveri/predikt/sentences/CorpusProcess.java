@@ -5,12 +5,9 @@
  */
 package eu.discoveri.predikt.sentences;
 
-import com.hazelcast.config.Config;
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
+import eu.discoveri.predikt.cluster.CWcount;
 import eu.discoveri.predikt.cluster.QRscore;
 
-import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.EmptySentenceListException;
 import eu.discoveri.predikt.exceptions.SentenceIsEmptyException;
 import eu.discoveri.predikt.exceptions.TokensCountInSentencesIsZeroException;
@@ -36,6 +33,7 @@ import java.util.stream.Collectors;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.tokenize.SimpleTokenizer;
 import opennlp.tools.tokenize.TokenizerME;
+import eu.discoveri.predikt.config.LangSetup;
 
 
 /**
@@ -45,16 +43,11 @@ import opennlp.tools.tokenize.TokenizerME;
  */
 public class CorpusProcess
 {
-    // Hazelcast mapping
-    private static Config cfg = new Config();
-    private static HazelcastInstance hi = Hazelcast.newHazelcastInstance(cfg);
-
     // Map of common words per sentence pair:<String,CountQR> (Word/token + counts)
-    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = new HashMap<>();
-//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>  commonWords = hi.getMap("commonwords");
+    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CWcount>>  commonWords = new HashMap<>();
     // Sentence similarity score
     private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,QRscore>              qrScore = new HashMap<>();
-//    private static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double>               qrScore = hi.getMap("qrScore");
+
     // Similarity score
     private static double                       score = 0.d;
     // Converged? flag
@@ -70,7 +63,7 @@ public class CorpusProcess
     // Sentences to analyze
     private final List<SentenceNode>            sents;
     // Language/Locale
-    private final Setup                         setup;
+    private final LangSetup                         setup;
     
     private final Language                      l;
 
@@ -80,12 +73,12 @@ public class CorpusProcess
      * @param sents 
      * @param setup 
      */
-    public CorpusProcess( List<SentenceNode> sents, Setup setup )
+    public CorpusProcess( List<SentenceNode> sents, LangSetup setup )
     {
         this.sents = sents;
         this.setup = setup;
 
-        // Setup language/locale            
+        // LangSetup language/locale            
         l = setup.getLanguage();
     }
     
@@ -255,7 +248,7 @@ public class CorpusProcess
      * @return 
      * @throws java.sql.SQLException 
      */
-    public List<SentenceNode> lemmatizeSentenceCorpusViaDb(Connection  conn)
+    public List<SentenceNode> lemmatizeSentenceCorpusViaRdb( Connection  conn )
             throws SQLException
     {
         // Lemmas SQL
@@ -263,10 +256,7 @@ public class CorpusProcess
         
         for( SentenceNode s: sents )
         {
-            // 1. Remove OOB characters
-            s.updateSentence( l.remOOBChars(s.getSentence()) );
-
-            // Tokenize
+            // Lemmatize
             for( Token t: s.getTokens() )
             {
                 ps.setString(1, t.getToken());
@@ -285,7 +275,8 @@ public class CorpusProcess
     }
     
     /**
-     * Clean up apostrophes, stopwords, numbers.
+     * *** MAIN CLEAN UP ***
+     * Clean up punctuation, apostrophes, stopwords, numbers.
      * 
      * @return
      * @throws EmptySentenceListException 
@@ -302,12 +293,12 @@ public class CorpusProcess
         // NB: Order is important!
         for( SentenceNode s: sents )
         {
-            // 1. Remove OOB chars (before tokenization takes place)
+            // 1. Remove OOB chars (before tokenization takes place, see rawTokenize etc.)
             // 2. Remove apostrophes (NB: based on language).  Note: generates more tokens
             List<Token> lts = l.unApostrophe(setup.loadApostrophesProperties(), s.getTokens());
             s.setTokens(lts);
 
-            // 3. All tokens now to lowercase and remove dashes, punctuation etc.
+            // 3. All tokens now to lowercase and remove dashes, punctuation etc. (Calls clean()).
             s.cleanTokens();
 
             // 4. Remove stopwords
@@ -326,6 +317,15 @@ public class CorpusProcess
         }
         
         return sents;
+    }
+    
+    /**
+     * Remove zero pairings from common words map
+     */
+    private Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CWcount>> cullCWs()
+    {
+        commonWords.entrySet().removeIf(e -> e.getValue().size() == 0);
+        return commonWords;
     }
     
     /**
@@ -358,7 +358,7 @@ public class CorpusProcess
         for( SentenceNode nodeQ: nodeList )
         {
             // Count of common words in each sentence of pair
-            CountQR cqr; 
+            CWcount cqr; 
             
             // 'Name of source Sentence(Node) Q
             String nameQ = nodeQ.getName();
@@ -408,7 +408,7 @@ public class CorpusProcess
                  * Now compare tokens of sentences Q:R
                  */
                 // Map of count of common words between two sentences <Word,count of Word per sentence pair>
-                Map<String,CountQR> wCountQR = new HashMap<>();
+                Map<String,CWcount> wCountQR = new HashMap<>();
                 
                 // For each token in sentenceQ (Note: Q token count >= R token count)
                 for( Token tQ: wordsQ )
@@ -418,8 +418,8 @@ public class CorpusProcess
                     if( wCountQR.containsKey(wordQ) )   // Is this token common between Q&R?
                     { // Yes
                         cqr = wCountQR.get(wordQ);      // Get current count for this token
-                        int count = cqr.getQ();         // Count in Q
-                        cqr.setQ(++count);              // Increment
+                        int count = cqr.getCountQ();         // Count in Q
+                        cqr.setCountQ(++count);              // Increment
                         wCountQR.replace(wordQ, cqr);   // Update
                         
                         // Already counted all of R (where token key is created below), so skip R
@@ -431,19 +431,19 @@ public class CorpusProcess
                     {
                         String wordR = tR.getToken();   // *MATCH* this token
                         
-                        if( wordR.equals(wordQ) )                                   // Words match between sentences?
+                        if( wordR.equals(wordQ) )                               // Words match between sentences?
                         { //Yes
                             // First match for token in both Q&R?
-                            if( !wCountQR.containsKey(wordQ) )                      // Create Map entry
+                            if( !wCountQR.containsKey(wordQ) )                  // Create Map entry
                             {//Yes
-                                wCountQR.put(wordQ, new CountQR(nameQ,1,nameR,1));  // Init count of both sentences
+                                wCountQR.put(wordQ, new CWcount(wordQ,1,1));    // Init count of both sentences
                             }
                             else
                             {//No
                                 // Ok, get the counts for this token
                                 cqr = wCountQR.get(wordR);
-                                int count = cqr.getR();         // Count for R sentence
-                                cqr.setR(++count);              // Increment R count
+                                int count = cqr.getCountR();         // Count for R sentence
+                                cqr.setCountR(++count);              // Increment R count
                                 wCountQR.replace(wordR, cqr);   // Update
                             }
                         }
@@ -451,9 +451,14 @@ public class CorpusProcess
                 }
                 
             // Ok, store the common words for the sentence pairs
-            commonWords.put(new AbstractMap.SimpleEntry(nodeQ,nodeR), wCountQR);
+//            commonWords.put(new AbstractMap.SimpleEntry(nodeQ,nodeR), wCountQR);
             }
         }
+
+        /*
+         * Remove zero word pairings
+         */
+        cullCWs();
 
         /*
          * Number sentences in which token appears (from commonWords map)
@@ -519,7 +524,7 @@ public class CorpusProcess
         for( SentenceNode nodeQ: nodeList )
         {
             // Count of common words in each sentence of pair
-            CountQR cqr; 
+            CWcount cqr; 
             
             // 'Name of source Sentence(Node) Q
             String nameQ = nodeQ.getName();
@@ -569,18 +574,19 @@ public class CorpusProcess
                  * Now compare tokens of sentences Q:R
                  */
                 // Map of count of common words between two sentences <Word,count of Word per sentence pair>
-                Map<String,CountQR> wCountQR = new HashMap<>();
+                Map<String,CWcount> wCountQR = new HashMap<>();
                 
                 // For each lemma in sentenceQ (Note: Q lemma count >= R lemma count)
                 for( Token tQ: wordsQ )
                 {
                     String wordQ = tQ.getLemma();       // *MATCH* this lemma
+                    if( wordQ.equals("") ) continue;    // Ignore blank lemmas
 
                     if( wCountQR.containsKey(wordQ) )   // Is this lemma common between Q&R?
                     { // Yes
                         cqr = wCountQR.get(wordQ);      // Get current count for this token
-                        int count = cqr.getQ();         // Count in Q
-                        cqr.setQ(++count);              // Increment
+                        int count = cqr.getCountQ();    // Count in Q
+                        cqr.setCountQ(++count);         // Increment
                         wCountQR.replace(wordQ, cqr);   // Update
                         
                         // Already counted all of R (where token key is created below), so skip R
@@ -592,29 +598,34 @@ public class CorpusProcess
                     {
                         String wordR = tR.getLemma();   // *MATCH* this lemma
                         
-                        if( wordR.equals(wordQ) )                                   // Words match between sentences?
+                        if( wordR.equals(wordQ) )                               // Words match between sentences?
                         { //Yes
                             // First match for token in both Q&R?
-                            if( !wCountQR.containsKey(wordQ) )                      // Create Map entry
+                            if( !wCountQR.containsKey(wordQ) )                  // Create Map entry
                             {//Yes
-                                wCountQR.put(wordQ, new CountQR(nameQ,1,nameR,1));  // Init count of both sentences
+                                wCountQR.put(wordQ, new CWcount(wordQ,1,1));    // Init count of both sentences
                             }
                             else
                             {//No
-                                // Ok, get the counts for this token
+                                // Ok, get the counts for this lemma
                                 cqr = wCountQR.get(wordR);
-                                int count = cqr.getR();         // Count for R sentence
-                                cqr.setR(++count);              // Increment R count
-                                wCountQR.replace(wordR, cqr);   // Update
+                                int count = cqr.getCountR();         // Count for R sentence
+                                cqr.setCountR(++count);              // Increment R count
+                                wCountQR.replace(wordR, cqr);        // Update
                             }
                         }
                     }
                 }
                 
-            // Ok, store the common words for the sentence pairs
-            commonWords.put(new AbstractMap.SimpleEntry(nodeQ,nodeR), wCountQR);
+                // Ok, store the common words for the sentence pairs
+                commonWords.put(new AbstractMap.SimpleEntry(nodeQ,nodeR), wCountQR);
             }
         }
+        
+        /*
+         * Remove zero word pairings
+         */
+        cullCWs();
 
         /*
          * Number sentences in which lemma appears (from commonWords map)
@@ -673,23 +684,15 @@ public class CorpusProcess
             
             // (Word/token + counts)
             v.forEach((w,c) -> {
-                // Number of times token/word appears across all sentences
+                // Number of sentences in which token/word appears
                 double sft = tokSentCount.get(w).values().stream().count();
-                // Similarity score for this pair (k: <SentenceNode,SentenceNode>
-                score += Math.log(c.getQ()+1.d)*Math.log(c.getR()+1.d)*Math.log((getSentences().size()+1.d)/(sft+0.5d));
+                // Similarity score for this pair (k: <SentenceNode,SentenceNode>)
+                score += Math.log(c.getCountQ()+1.d)*Math.log(c.getCountR()+1.d)*Math.log((getSentences().size()+1.d)/(sft+0.5d));
             });
             
             // Store similarity score for each sentence pair
             qrScore.put(k, new QRscore(k.getKey(),k.getValue(),score));
         });
-    }
-    
-    /**
-     * Shutdown the HZC mapping
-     */
-    public void closeCorpusProcess()
-    {
-        Hazelcast.shutdownAll();
     }
     
     /**
@@ -789,10 +792,10 @@ public class CorpusProcess
             String pSrc = k.getKey().getName();                 // Source sentence
             String pTgt = k.getValue().getName();               // Target sentence
 
-            System.out.println("Pair: "+pSrc+"/"+pTgt);
+            System.out.println("Pair: "+pSrc+"/"+pTgt+ ", pairsize: " +v.size());
             // Common word/token count
             v.forEach((s,c) -> {
-                System.out.println("   word: " +s+"> "+c.getqName()+"(Q count): " +c.getQ()+" / "+c.getrName()+"(R count): " +c.getR());
+                System.out.println("   word: " +s+"> "+c.getMatchedWord()+"(Q count): " +c.getCountQ()+" / "+"(R count): " +c.getCountR());
                 });
         });
     }
@@ -828,12 +831,12 @@ public class CorpusProcess
         if( !full )
         {
             qrScore.forEach((k,v) -> {
-                System.out.println("Pair: " +k.getKey().getName()+"/"+k.getValue().getName() +", Score: " +v);
+                System.out.println("Pair: " +k.getKey().getName()+"/"+k.getValue().getName() +", Score: " +v.getScore());
             });
         }
         else
             qrScore.forEach((k,v) -> {
-                System.out.format("Pair> Q:(" +k.getKey().getName()+")/R:("+k.getValue().getName() +"), SimScore: %9.5f%n",v);
+                System.out.format("Pair> Q:(" +k.getKey().getName()+")/R:("+k.getValue().getName() +"), SimScore: %9.5f%n",v.getScore());
                 System.out.println("   Sentence Q: " +k.getKey().getSentence());
                 System.out.println("   Sentence R: " +k.getValue().getSentence());
                 System.out.println("");

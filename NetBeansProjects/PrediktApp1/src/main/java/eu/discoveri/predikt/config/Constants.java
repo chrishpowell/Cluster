@@ -76,8 +76,10 @@ public class Constants
     public static final String      PKGGRAPH = DEFNS+".graph";
     public static final String      PKGSENTS = DEFNS+".sentences";
     public static final String      PKGCLUSTER = DEFNS +".cluster";
+    public static final String      PKGTESTS = DEFNS +".tests";
     
-    // Text Ranking parameters
+    
+    // Text Ranking parameters (?? No longer used?)
     public static final double      TEXTRANK_DAMPING_FACTOR = 0.85D;
     public static final double      SCORECONVERGE = 0.005D;
     public static final int         NUMITERS = 100;
@@ -94,4 +96,18 @@ public class Constants
     public static final int         PORT1 = 7687;
     public static final String      VSRV2 = "localhost";
     public static final int         PORT2 = 9999;
+    // Pagination
+    public static final int         PAGSIZE = 7;
+    
+    // Load depth, here just entity simple properties, no relationships
+    // Default: 1, load simple properties of the entity and its immediate relations.
+    public static final int         DEPTH_LIST = 1;
+    // Save entity and immediate relations.  -1 not for relationsships!
+    // Default: -1, save everything reachable from this entity that has been modified
+    public static final int         DEPTH_ENTITY = 1;
+    
+    // Db threads, retry consts for locking clash
+    public static final int         THREADLISTSIZE = 1;
+    public static final int         THREADPAUSEMSECS = 250;
+    public static final int         THREADRETRIES = 5;
 }

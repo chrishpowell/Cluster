@@ -21,9 +21,9 @@ public class CountQR implements Serializable
     /**
      * Constructor.
      * 
-     * @param qName Source sentence
+     * @param qName Source sentence token/word
      * @param q Count in q
-     * @param rName Target sentence
+     * @param rName Target sentence token/word
      * @param r Count in r
      */
     public CountQR( String qName, int q, String rName, int r )
@@ -41,6 +41,5 @@ public class CountQR implements Serializable
     public void setR(int r) { this.r = r; }
 
     public String getqName() { return qName; }
-
     public String getrName() { return rName; }
 }

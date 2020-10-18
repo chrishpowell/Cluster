@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) Discoveri SIA - All Rights Reserved
+ * Unauthorized copying of this file, via any medium is strictly prohibited.
+ * Proprietary and confidential.
  */
 package eu.discoveri.predikt.sentences;
 
@@ -10,14 +13,14 @@ package eu.discoveri.predikt.sentences;
  */
 public enum LangCode
 {
-    en("english"),
-    es("spanish"),
-    pt("portuguese"),
-    fr("french"),
-    de("german"),
-    ru("russian"),
-    hi("hindi"),
-    zh("chinese");          // Mandarin
+    en("English"),
+    es("Spanish"),
+    pt("Portuguese"),
+    fr("French"),
+    de("German"),
+    ru("Russian"),
+    hi("Hindi"),
+    zh("Chinese");          // Mandarin
 
     private final String    name;
     

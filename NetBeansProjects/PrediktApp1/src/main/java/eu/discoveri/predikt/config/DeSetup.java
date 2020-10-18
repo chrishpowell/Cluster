@@ -25,7 +25,7 @@ import java.util.Properties;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class DeSetup implements Setup
+public class DeSetup implements LangSetup
 {
     // Lemmas
     public static class Lemma

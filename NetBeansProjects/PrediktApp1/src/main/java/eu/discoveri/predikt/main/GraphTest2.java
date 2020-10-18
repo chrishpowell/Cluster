@@ -247,7 +247,7 @@ public class GraphTest2
 
         // Session
         DiscoveriSessionFactory discSess = DiscoveriSessionFactory.getInstance();
-        Session sess = discSess.getSession();
+        Session sess = discSess.getNewSession();
         // Db service
         SentenceNodeService sns = new SentenceNodeService();
         SentenceEdgeService ses = new SentenceEdgeService();

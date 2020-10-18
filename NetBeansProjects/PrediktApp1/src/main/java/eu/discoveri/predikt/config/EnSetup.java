@@ -8,12 +8,12 @@ package eu.discoveri.predikt.config;
 import eu.discoveri.predikt.sentences.English;
 import eu.discoveri.predikt.sentences.LangCode;
 import eu.discoveri.predikt.sentences.Language;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -24,7 +24,7 @@ import java.util.Properties;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class EnSetup implements Setup
+public class EnSetup implements LangSetup
 {
     // Lemmas
     public static class Lemma

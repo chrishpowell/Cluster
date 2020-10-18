@@ -8,6 +8,8 @@ package eu.discoveri.predikt.cluster;
 import com.hazelcast.map.MapStore;
 
 import eu.discoveri.predikt.graph.SentenceNode;
+import eu.discoveri.predikt.graph.service.CommonWordsService;
+import eu.discoveri.predikt.graph.service.QRscoreService;
 import eu.discoveri.predikt.sentences.CountQR;
 
 import java.sql.Connection;
@@ -24,17 +26,16 @@ import java.util.Map;
  */
 public class CommonWordsMS implements MapStore<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Map<String,CountQR>>
 {
-    private final Connection    conn;
-    private PreparedStatement   ps;
-
+    private CommonWordsService cws;
+    
     /**
      * Constructor.
      * 
      * @param conn 
      */
-    public CommonWordsMS( Connection conn )
+    public CommonWordsMS( CommonWordsService cws )
     {
-        this.conn = conn;
+        this.cws = cws;
     }
     
     @Override

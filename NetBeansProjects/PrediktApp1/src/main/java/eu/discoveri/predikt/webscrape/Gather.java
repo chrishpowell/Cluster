@@ -9,7 +9,7 @@ import java.util.Map;
 import java.io.IOException;
 
 import org.carrot2.clustering.stc.STCClusteringAlgorithm;
-import org.carrot2.core.Cluster;
+import org.carrot2.clustering.Cluster;
 import org.carrot2.core.Controller;
 import org.carrot2.core.ControllerFactory;
 import org.carrot2.core.Document;

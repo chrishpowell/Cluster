@@ -6,6 +6,8 @@
 package eu.discoveri.predikt.graph;
 
 
+import eu.discoveri.predikt.cluster.DocumentCategory;
+import eu.discoveri.predikt.cluster.SentenceClusterNum;
 import eu.discoveri.predikt.exceptions.ListLengthsDifferException;
 import eu.discoveri.predikt.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.predikt.exceptions.SentenceIsEmptyException;
@@ -26,6 +28,7 @@ import java.text.ParseException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -42,22 +45,14 @@ import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.util.Sequence;
 import opennlp.tools.util.Span;
 
-import org.neo4j.driver.Query;
-import static org.neo4j.driver.Values.parameters;
-import org.neo4j.ogm.annotation.Properties;
-import org.neo4j.ogm.annotation.Relationship;
-
 
 /**
  * Neo4j node for a sentence.
  * @author Chris Powell, Discoveri OU
  * @email info@discoveri.eu
  */
-public class SentenceNode extends AbstractVertex
+public class SentenceNode extends AbstractVertex implements Comparator<SentenceNode>, Comparable<SentenceNode>
 {
-    // Serialization
-    private static final long   serialVersionUID = 111L;
-    
     // Basic attrs
     private String              origText = "";
     private String              sentence = "";
@@ -68,32 +63,18 @@ public class SentenceNode extends AbstractVertex
     // Language/Locale
     private LangCode            langCode;
     private Locale              locale;
-    
-    // Subgraph label
-    private String              subgraph = null;
-    
-    // Distance
-    private double              dist = Double.MAX_VALUE;
-    // Between
-    private double              between = 0.d, cbetween = 0.d;
-    // Shortest paths (will be changed by edge weight)
-    private double              spath = 0.d;
-    // 'Prev.' node along path
-    @Relationship(type="PREV")
-    private SentenceNode        prev = null;
 
+    // Clusters
+    private DocumentCategory            docCategory;
+    private final SentenceClusterNum    clusterNum = new SentenceClusterNum();
     // Predecessors
-    private List<SentenceNode>      preds = new ArrayList<>();
+    private List<SentenceNode>          preds = new ArrayList<>();
     // Spans
-    private final List<Span>        spans = new ArrayList<>();
+    private final List<Span>            spans = new ArrayList<>();
     // Sequences
-    private final List<Sequence>    seqs = new ArrayList<>();
+    private final List<Sequence>        seqs = new ArrayList<>();
     // Sentence probability
-    private List<Double>            sprobs = new ArrayList<>();
-
-    // Neo4j params
-    @Properties
-    private Map<String,Object>      params = new HashMap<>();
+    private List<Double>                sprobs = new ArrayList<>();
 
 
     /**
@@ -105,9 +86,10 @@ public class SentenceNode extends AbstractVertex
      * @param langCode
      * @param locale
      * @param tokens
+     * @param docCategory
      * @param initScore 
      */
-    public SentenceNode(String name, String namespace, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
+    public SentenceNode(String name, String namespace, String origText, LangCode langCode, Locale locale, List<Token> tokens, DocumentCategory docCategory, double initScore)
     {
         super(name,namespace);
 
@@ -117,19 +99,16 @@ public class SentenceNode extends AbstractVertex
         this.locale = locale;
         this.tokens = tokens;
         this.prevScore = initScore;
+        this.docCategory = docCategory;
         this.score = initScore;
-        this.sentence = origText;
-
-        // Build map for graph (tokens need to be processed separately)
-        params = Map.of( "name",name,
-                         "sentence",origText,
-                         "score",score);
+        // Spaces cleanup to work with further processing
+        this.sentence = origText.trim().replaceAll(" +", " ");
     }
     
     /**
-     * Constructor.Sets a default namespace.
+     * Constructor. Sets a default namespace. No DocumentCategory
      * 
-     * @param name doesnt 
+     * @param name  
      * @param origText
      * @param langCode
      * @param locale
@@ -138,7 +117,7 @@ public class SentenceNode extends AbstractVertex
      */
     public SentenceNode(String name, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
     {
-        this(name,Constants.DEFNS, origText, langCode, locale, tokens, initScore);
+        this(name,Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(), initScore);
     }
     
     /**
@@ -146,11 +125,12 @@ public class SentenceNode extends AbstractVertex
      * 
      * @param name
      * @param origText Sentence text (with punctuation etc.)
+     * @param docCategory
      * @param initScore 
      */
-    public SentenceNode(String name, String origText, double initScore)
+    public SentenceNode(String name, String origText, DocumentCategory docCategory, double initScore)
     {
-        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), initScore);
+        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), docCategory, initScore);
     }
     
     /**
@@ -160,27 +140,42 @@ public class SentenceNode extends AbstractVertex
      * @param origText Sentence text (with punctuation etc.)
      * @param langCode
      * @param locale
+     * @param docCategory
      */
-    public SentenceNode( String name, String origText, LangCode langCode, Locale locale )
+    public SentenceNode( String name, String origText, LangCode langCode, Locale locale, DocumentCategory docCategory  )
     {
-        this(name,Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), Constants.NODESCOREDEF);
+        this(name,Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, Constants.NODESCOREDEF);
     }
     
         
     /**
-     * Constructor.With default namespace.
+     * Constructor. With default namespace.
      * 
      * @param name Name or Id
      * @param origText Sentence text (with punctuation etc.)
      * @param langCode
      * @param locale
+     * @param docCategory
      * @param initScore
      */
-    public SentenceNode( String name, String origText, LangCode langCode, Locale locale, double initScore )
+    public SentenceNode( String name, String origText, LangCode langCode, Locale locale, DocumentCategory docCategory, double initScore )
     {
-        this(name,Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), initScore);
+        this(name,Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, initScore);
     }
     
+    
+    /**
+     * Constructor. With default namespace, initial score and  and language
+     * LangCode.en.
+     * 
+     * @param name Name or Id
+     * @param origText Sentence text (with punctuation etc.)
+     * @param docCategory
+     */
+    public SentenceNode( String name, String origText, DocumentCategory docCategory )
+    {
+        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), docCategory, Constants.NODESCOREDEF);
+    }
     
     /**
      * Constructor. With default namespace, initial score and  and language
@@ -191,7 +186,7 @@ public class SentenceNode extends AbstractVertex
      */
     public SentenceNode( String name, String origText )
     {
-        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), Constants.NODESCOREDEF);
+        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
     }
     
     /**
@@ -199,41 +194,24 @@ public class SentenceNode extends AbstractVertex
      */
     private SentenceNode()
     {
-        this("","","",LangCode.en,Locale.ENGLISH,null,0.0d);
+        this("","","",LangCode.en,Locale.ENGLISH,new ArrayList<Token>(),new DocumentCategory(),0.0d);
     }
 
 
     public String getSentence() { return sentence; }
     public void updateSentence( String s ) { sentence = s; }
     public String getOrigText() { return origText; }
+    
+    public DocumentCategory getDocumentCategory() { return docCategory; }
 
     public double getScore() { return score; }
     public void setScore(double score) { this.score = score; }
 
     public List<SentenceNode> getPreds() { return preds; }
     public void setPreds(List<SentenceNode> preds) { this.preds = preds; }
-    
-    public double getDist() { return dist; }
-    public void setDist(double dist) { this.dist = dist; }
-
-    public double getBetween() { return between; }
-    public void setBetween(double between) { this.between = between; }
-
-    public double getCbetween() { return cbetween; }
-    public void setCbetween(double cbetween) { this.cbetween = cbetween; }
-
-    public double getSpath() { return spath; }
-    public void setSpath(double spath) { this.spath = spath; }
-    public void incrSPath(double vpath) { this.spath += vpath; }
-
-    public SentenceNode getPrev() { return prev; }
-    public void setPrev(SentenceNode prev) { this.prev = prev; }
 
     public List<Token> getTokens() { return tokens; }
     public void setTokens(List<Token> tokens) { this.tokens = tokens; }
-    
-    public String getSubgraph() { return subgraph; }
-    public void setSubgraph(String subgraph) { this.subgraph = subgraph; }
     
     public LangCode getLangCode(){ return langCode; }
     public Locale getLocale() { return locale; }
@@ -289,7 +267,7 @@ public class SentenceNode extends AbstractVertex
      */
     public List<Token> cleanTokens()
     {
-        for( Iterator<Token> t = tokens.iterator(); t.hasNext(); )
+        for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tokn = t.next();
             String tok = tokn.getToken();
@@ -300,13 +278,14 @@ public class SentenceNode extends AbstractVertex
             {
                 tok = clean(tok.toLowerCase(locale));
 
+                // @TODO: Check for German (wie geht's)
                 if( tok.contains("'s") )
                     tok = tok.replaceAll("'s", "");
                 tokn.setToken(tok);
             }
         }
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -317,7 +296,7 @@ public class SentenceNode extends AbstractVertex
     public List<Token> removeNumbers( Locale locl )
     {
         NumberFormat nf = NumberFormat.getInstance(locl);
-        for( Iterator<Token> t = tokens.iterator(); t.hasNext(); )
+        for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tok = t.next();
             try
@@ -328,7 +307,7 @@ public class SentenceNode extends AbstractVertex
             catch( ParseException pex ){}                                       // If not a number, good
         }
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -365,7 +344,7 @@ public class SentenceNode extends AbstractVertex
     public List<Token> keepTokens( List<String> keepToks )
     {
         // For each token...
-        for( Iterator<Token> t = tokens.iterator(); t.hasNext(); )
+        for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tok = t.next();
             boolean matched = false;
@@ -383,7 +362,7 @@ public class SentenceNode extends AbstractVertex
             if(!matched) t.remove();
         }
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -393,17 +372,17 @@ public class SentenceNode extends AbstractVertex
      */
     public List<Token> removeUnwanted()
     {
-        for( Iterator<Token> t = tokens.iterator(); t.hasNext(); )
+        for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
-            Token tok = t.next();
+            String tok = t.next().getToken();
             // Others may be added
-            if( tok.getToken().equals("\u2019\u0073") ) // 's
-            {
+            if( tok.equals("\u2019\u0073") )                // 's
                 t.remove();
-            }
+            if( tok.equals("") )                            // 'null'
+                t.remove();
         }
         
-        return tokens;
+        return this.tokens;
     }
 
     /**
@@ -423,10 +402,10 @@ public class SentenceNode extends AbstractVertex
         // Add tokens to (Token) List with probabilites
         Arrays.asList(tme.tokenize(this.sentence)).forEach(tok-> {
             // Add token to list
-            tokens.add(new Token(tok));
+            this.tokens.add(new Token(tok));
         });
 
-        return tokens;
+        return this.tokens;
     }
 
     /**
@@ -446,10 +425,10 @@ public class SentenceNode extends AbstractVertex
         // Add tokens to (Token) List with probabilites
         Arrays.asList(st.tokenize(this.sentence)).forEach(tok-> {
             // Add token to list
-            tokens.add(new Token(tok));
+            this.tokens.add(new Token(tok));
         });
 
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -471,7 +450,7 @@ public class SentenceNode extends AbstractVertex
         
         StringBuilder tok = new StringBuilder();
         // StringReader allows Unicode
-        try (StringReader sr = new StringReader(sentence))
+        try( StringReader sr = new StringReader(sentence) )
         {
             // Read through sentence
             while(true)
@@ -479,14 +458,14 @@ public class SentenceNode extends AbstractVertex
                 int ch = sr.read();
                 if( ch == -1 )
                 {
-                    tokens.add(new Token(tok.toString()));
+                    this.tokens.add(new Token(tok.toString()));
                     break;
                 }
                 
                 // If whitespace, new token else append to current
                 if( Character.isWhitespace(ch) )
                 {
-                    tokens.add(new Token(tok.toString()));
+                    this.tokens.add(new Token(tok.toString()));
                     tok = new StringBuilder();
                 }
                 else
@@ -494,7 +473,7 @@ public class SentenceNode extends AbstractVertex
             }
         }
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -513,12 +492,12 @@ public class SentenceNode extends AbstractVertex
             throws TokensListIsEmptyException
     {
         // No tokens?
-        if( tokens.isEmpty() )
+        if( this.tokens.isEmpty() )
             throw new TokensListIsEmptyException("No tokens, SentenceNode:postagThisSentence()");
         
         // Get list of POStags
-        Token[] toks = tokens.toArray(new Token[0]);
-        String[] ptags = pme.tag(tokens.stream().map(t -> t.getToken()).toArray(String[]::new));
+        Token[] toks = this.tokens.toArray(new Token[0]);
+        String[] ptags = pme.tag(this.tokens.stream().map(t -> t.getToken()).toArray(String[]::new));
         
         // Map simplified tag into Token class
         for( int ii=0; ii<ptags.length; ii++ )
@@ -544,12 +523,12 @@ public class SentenceNode extends AbstractVertex
             throws SentenceIsEmptyException, TokensListIsEmptyException
     {
         // Generate tokens
-        tokens = tokenizeThisSentence( tme );
+        this.tokens = tokenizeThisSentence( tme );
         
         // Add POS tags to tokens
         posTagThisSentence( pme );
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -566,12 +545,12 @@ public class SentenceNode extends AbstractVertex
             throws SentenceIsEmptyException, TokensListIsEmptyException
     {
         // Generate tokens
-        tokens = simpleTokenizeThisSentence( st );
+        this.tokens = simpleTokenizeThisSentence( st );
         
         // Add POS tags to tokens
         posTagThisSentence( pme );
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -587,12 +566,12 @@ public class SentenceNode extends AbstractVertex
             throws SentenceIsEmptyException, TokensListIsEmptyException, IOException
     {
         // Generate tokens
-        tokens = rawTokenizeThisSentence();
+        this.tokens = rawTokenizeThisSentence();
         
         // Add POS tags to tokens
         posTagThisSentence( pme );
         
-        return tokens;
+        return this.tokens;
     }
     
     /**
@@ -658,13 +637,13 @@ public class SentenceNode extends AbstractVertex
             throws TokensListIsEmptyException
     {
         // No tokens?
-        if( tokens.isEmpty() )
+        if( this.tokens.isEmpty() )
             throw new TokensListIsEmptyException("No tokens, SentenceNode:addSequences2Sentence(): " +getName());
 
         // Get tokens into String array
-        String[] stoks = new String[tokens.size()];
+        String[] stoks = new String[this.tokens.size()];
         int idx = 0;
-        for( Token t: tokens )
+        for( Token t: this.tokens )
         {
             stoks[idx++] = t.getToken();
         }
@@ -688,9 +667,9 @@ public class SentenceNode extends AbstractVertex
             throw new SentenceIsEmptyException("Empty sentence, SentenceNode:spanThisSentence() " +getName());
         
         // Put spans in List
-        spans.addAll(Arrays.asList(tme.tokenizePos(this.sentence)));
+        this.spans.addAll(Arrays.asList(tme.tokenizePos(this.sentence)));
         
-        return spans;
+        return this.spans;
     }
     
     /**
@@ -702,9 +681,9 @@ public class SentenceNode extends AbstractVertex
     public List<Double> addSentenceProbs( double[] inprobs )
     {
         // Convert to list
-        sprobs = DoubleStream.of(inprobs).boxed().collect(Collectors.toList());
+        this.sprobs = DoubleStream.of(inprobs).boxed().collect(Collectors.toList());
         
-        return sprobs;
+        return this.sprobs;
     }
     
     /**
@@ -724,74 +703,78 @@ public class SentenceNode extends AbstractVertex
         Map<Token,String>  lemmas;
         
         // Get token strings into List
-        List<String> tags = tokens.stream().map(t -> t.getPOS()).collect(Collectors.toList());
+        List<String> tags = this.tokens.stream().map(t -> t.getPOS()).collect(Collectors.toList());
 
         /*
          * Form lemmas from <token-string,POStag> 'key' into dictionary. Returns
          * tok-string,lemma map. Throws exception if List lengths differ
          */
-        lemmas = lemmer.lemmatize2Token(tokens, tags, match2NN);
-        lemmas.forEach((k,v) -> Utils.findListEntry(tokens,k).get().setLemma(v));
+        lemmas = lemmer.lemmatize2Token(this.tokens, tags, match2NN);
+        lemmas.forEach((k,v) -> Utils.findListEntry(this.tokens,k).get().setLemma(v));
 
         return lemmas;
     }
     
     /**
+     * @TODO: Move to utils?
      * Create a new sentence node, ready for persisting.
+     * @param params, eg: Map.of("name","fred","id",123)
      * @return Ordered set of Queries
      */
-    public Set<Query> buildSentenceQuerySet()
-    {
-        // Ordered Set
-        Set<Query> lhs = new LinkedHashSet<>();
-        // Map for tokens
-        Map<String,Object> ps = new HashMap<>();
-        
-        // Add first query
-        String s = "CREATE ("+getName()+":Sentence) SET "+getName()+"={sid:$sid,name:$name,sentence:$sentence,score:$score}";
-        lhs.add( new Query(s,params) );
+    //
+//    public Set<Query> buildSentenceQuerySet(Map<String,Object> params)
+//    {
+//        // Ordered Set
+//        Set<Query> lhs = new LinkedHashSet<>();
+//        // Map for tokens
+//        Map<String,Object> ps = new HashMap<>();
+//        
+//        // Add first query
+//        String s = "CREATE ("+getName()+":Sentence) SET "+getName()+"={sid:$sid,name:$name,sentence:$sentence,score:$score}";
+//        lhs.add( new Query(s,params) );
+//
+//        // Create tokens of the sentence
+//        StringBuilder q0 = new StringBuilder();
+//        int idx = 0;
+//        for( Token t: this.tokens )
+//        {
+//            q0.append("CREATE (t").append(idx).append(getName())
+//                    .append(":Token {text:$text").append(idx)
+//                    .append(",tid:$tid").append(idx).append("}) ");
+//
+//            ps.put("text"+idx,t.getToken());
+//            ps.put("tid"+idx,"t"+idx+getName());
+//            // Incr idx
+//            ++idx;
+//        }
+//        
+//        // Create the query
+//        lhs.add( new Query(q0.toString(),ps) );
+//        
+//        // Build edges
+//        idx = 0;
+//        for( Token t: this.tokens )
+//        {
+//            StringBuilder q1 = new StringBuilder();
+//            q1.append(" MATCH (src:Sentence {sid:$sid}) MATCH (tgt:Token {tid:$tid})")
+//                    .append(" MERGE (src)-[:TOK]-(tgt)");
+//            
+//            // Create the query
+//            lhs.add( new Query(q1.toString(),parameters("sid",getName(),"tid","t"+idx+getName())) );
+//            // Incr idx
+//            ++idx;
+//        }
+//
+//        return lhs;
+//    }
 
-        // Create tokens of the sentence
-        StringBuilder q0 = new StringBuilder();
-        int idx = 0;
-        for( Token t: tokens )
-        {
-            q0.append("CREATE (t").append(idx).append(getName())
-                    .append(":Token {text:$text").append(idx)
-                    .append(",tid:$tid").append(idx).append("}) ");
-
-            ps.put("text"+idx,t.getToken());
-            ps.put("tid"+idx,"t"+idx+getName());
-            // Incr idx
-            ++idx;
-        }
-        
-        // Create the query
-        lhs.add( new Query(q0.toString(),ps) );
-        
-        // Build edges
-        idx = 0;
-        for( Token t: tokens )
-        {
-            StringBuilder q1 = new StringBuilder();
-            q1.append(" MATCH (src:Sentence {sid:$sid}) MATCH (tgt:Token {tid:$tid})")
-                    .append(" MERGE (src)-[:TOK]-(tgt)");
-            
-            // Create the query
-            lhs.add( new Query(q1.toString(),parameters("sid",getName(),"tid","t"+idx+getName())) );
-            // Incr idx
-            ++idx;
-        }
-
-        return lhs;
-    }
     
     /**
      * Dump out tokens.
      */
     public void dumpTokens()
     {
-        tokens.forEach(t -> System.out.print(" [" +t.getToken()+ "]"));
+        this.tokens.forEach(t -> System.out.print(" [" +t.getToken()+ "]"));
         System.out.println("");
     }
     
@@ -800,7 +783,7 @@ public class SentenceNode extends AbstractVertex
      */
     public void dumpFullTokens()
     {
-        tokens.forEach(t -> System.out.print(" ["+t.getToken()+":"+t.getPOS()+":"+t.getLemma()+"]"));
+        this.tokens.forEach(t -> System.out.print(" ["+t.getToken()+":"+t.getPOS()+":"+t.getLemma()+"]"));
         System.out.println("");
     }
     
@@ -809,7 +792,7 @@ public class SentenceNode extends AbstractVertex
      */
     public void dumpTokenPOS()
     {
-        tokens.forEach(t -> {
+        this.tokens.forEach(t -> {
             System.out.println("[" +t.getToken()+ "]: " +t.getPOS());
         });
         
@@ -821,7 +804,7 @@ public class SentenceNode extends AbstractVertex
      */
     public void dumpTokenChars()
     {
-        tokens.forEach(t -> {
+        this.tokens.forEach(t -> {
             System.out.print(" [" +t.getToken()+ "]: " +t.getPOS());
             CharacterUtils.bytestoIntStream(t.getToken()).forEach(c -> System.out.print(" "+c));
             System.out.println("");
@@ -862,6 +845,29 @@ public class SentenceNode extends AbstractVertex
     }
 
     /**
+     * Comparator: Sort SentenceNodes by number tokens (used in comparing sentences).
+     * @param s1
+     * @param s2
+     * @return 
+     */
+    @Override
+    public int compare(SentenceNode s1, SentenceNode s2)
+    {
+        return s1.tokens.size() - s2.tokens.size();
+    }
+    
+    /**
+     * Comparable: Sort SentenceNodes by number tokens (used in comparing sentences).
+     * @param other
+     * @return 
+     */
+    @Override
+    public int compareTo(SentenceNode other)
+    {
+        return this.tokens.size() - other.tokens.size();
+    }
+
+    /**
      * Hash.
      * @return 
      */
@@ -897,6 +903,6 @@ public class SentenceNode extends AbstractVertex
     @Override
     public String toString()
     {
-        return getName()+" ("+tokens.size()+")";
+        return getName()+" ("+this.tokens.size()+")";
     }
 }

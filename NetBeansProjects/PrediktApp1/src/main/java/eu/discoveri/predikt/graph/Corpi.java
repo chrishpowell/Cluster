@@ -5,7 +5,11 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.cluster.DocumentCategory;
+import eu.discoveri.predikt.cluster.RawDocument;
 import eu.discoveri.predikt.sentences.Token;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 
 import java.util.Arrays;
 import java.util.List;
@@ -32,6 +36,49 @@ public class Corpi
     
     // Test sentences
     private static final List<SentenceNode> sents9 = Arrays.asList(
+        new SentenceNode("S1","American inventor Philo T. Farnsworth, a pioneer of television, was accorded what many believe was long overdue glory Wednesday when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol.", new DocumentCategory(1,"television inventor")),
+        new SentenceNode("S2","American inventor Philo T. Farnsworth, a pioneer of television, was honored when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol.", new DocumentCategory(1,"television inventor")),
+        new SentenceNode("S3","With his 81-year-old widow, Elma Farnsworth, looking on, the inventor was extolled as the father of television and his statue was placed in the pantheon of famous Americans of the Capitol’s National Statuary Hall", new DocumentCategory(1,"television inventor")),
+        new SentenceNode("S4","The clear favorite was one Philo T. Farnsworth, an inventor who is considered the father of television", new DocumentCategory(1,"television inventor")),
+        new SentenceNode("S5","If Utahans have their way, Philo T. Farnsworth will become a household name", new DocumentCategory(1,"television inventor")),
+        new SentenceNode("S6","The crew worked for more than two hours to separate the 8.5-foot bronze likeness of the city’s fictitious boxer from the steps of the Philadelphia Museum of Art, which has repeatedly insisted it doesn’t want the statue.", new DocumentCategory(2,"Rocky")),
+        new SentenceNode("T0","Confederate statues litter the squares of Southern states.", new DocumentCategory(3,"Confederates")),
+        new SentenceNode("T1","The quick brown fox jumps over the lazy dog", new DocumentCategory(4,"fox lazy dog")),
+        new SentenceNode("T2","The quick brown hound jumps over the lazy fox.", new DocumentCategory(4,"fox lazy dog")),
+        new SentenceNode("C0","Tropical climate is one of the five major climate groups in the Köppen climate classification of heat.", new DocumentCategory(5,"climate")),
+        new SentenceNode("C1","Tropical climates are broadly located within 20 to 25 degrees of the equator and characterized by monthly average temperatures of 18 ℃ (64.4 ℉), or higher year-round, often following a seasonal rhythm and where annual precipitation is generally abundant and sunlight is intense.", new DocumentCategory(5,"climate")),
+        new SentenceNode("C2","Whew, it's hot!", new DocumentCategory(9,"singleton")),
+        new SentenceNode("A1","Dear readers, as the sun shifts into fire sign Leo, the Tarot offers a collective message for all signs to ponder: Step up to the work presented by 5 of Swords, and invite the gifts of Knight of Cups.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A2","The 5 of Swords card depicts two figures walking away in defeat, their swords lay on the ground, as the third figure watches in satisfaction carrying three swords in their hands.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A3","In spirituality, there seems to be an overarching message that all we need is love and light, that rising above tribulations and becoming enlightened will end suffering.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A4","That message is not what this card represents.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A5","The energy we are being asked to experience is one of victory and defeat. We cannot bypass struggle and discomfort and all the “dark” aspects of life, we must move through them and allow them to fuel us.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A6","Saturday’s first planetary aspect is an opposition between the moon in balanced Libra and Chiron in impulsive Aries.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A7","At this moment, we may be trying to hold our ongoing wounds in check with Libra’s objectivity and patience.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A8","Chiron in Aries is the wounding of the self and the ways that we have been hurt by simply being who we are.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("A9","The moon in Libra is in polarity to this, as Libra tends to put others first for the sake of peace, a practice that can carry wounds of its own.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("Aa","The tension that this opposition story presents is an opportunity to bring our sense of self and personal authority back into some balance; by being objective enough to see that we are worthy as we are, yet being individualistic enough to stand in our authenticity.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("Ab","The rest of the day passes with no major aspects, until the moon/Mercury square of the early evening.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("Ac","The moon in Libra and Mercury in Cancer are both working strong, initiatory, cardinal powers, yet they do so at cross purposes.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("Ad","This evening, it’s difficult to bring the somewhat aloof emotional tone of the moment into harmony with the raw, vulnerable sentiments that have prevailed for the last two months.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("Ae","This edgy mood is further exacerbated by the moon opposing Mars in battle-ready Aries, an aspect that may bring emotional matters to a head tonight.", new DocumentCategory(6,"astrology horoscope")),
+        new SentenceNode("P0","With eight successful Mars landings, NASA is upping the ante with its newest rover.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P1","The spacecraft Perseverance—set for liftoff this week—is NASA's biggest and brainiest Martian rover yet.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P2","It sports the latest landing tech, plus the most cameras and microphones ever assembled to capture the sights and sounds of Mars.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P3","Its super-sanitized sample return tubes—for rocks that could hold evidence of past Martian life—are the cleanest items ever bound for space.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P4","A helicopter is even tagging along for an otherworldly test flight.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P5","This summer's third and final mission to Mars—after the United Arab Emirates' Hope orbiter and China's Quest for Heavenly Truth orbiter-rover combo—begins with a launch scheduled for Thursday morning from Cape Canaveral.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P6","Like the other spacecraft, Perseverance should reach the red planet next February following a journey spanning seven months and more than 300 million miles (480 million kilometers).", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P7","The six-wheeled, car-sized Perseverance is a copycat of NASA's Curiosity rover, prowling Mars since 2012, but with more upgrades and bulk.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P8","Its 7-foot (2-meter) robotic arm has a stronger grip and bigger drill for collecting rock samples, and it's packed with 23 cameras, most of them in color, plus two more on Ingenuity, the hitchhiking helicopter.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("P9","The cameras will provide the first glimpse of a parachute billowing open at Mars, with two microphones letting Earthlings eavesdrop for the first time.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("Pa","Once home to a river delta and lake, Jezero Crater is NASA's riskiest Martian landing site yet because of boulders and cliffs, hopefully avoided by the spacecraft's self-navigating systems.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("Pb","Perseverance has more self-driving capability, too, so it can cover more ground than Curiosity.", new DocumentCategory(7,"NASA Mars")),
+        new SentenceNode("Pc","The enhancements make for a higher mission price tag: nearly $3 billion.", new DocumentCategory(7,"NASA Mars"))
+    );
+    
+    // Test sentences
+    private static final List<SentenceNode> sents8 = Arrays.asList(
         new SentenceNode("S1","American inventor Philo T. Farnsworth, a pioneer of television, was accorded what many believe was long overdue glory Wednesday when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."),
         new SentenceNode("S2","American inventor Philo T. Farnsworth, a pioneer of television, was honored when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."),
         new SentenceNode("S3","With his 81-year-old widow, Elma Farnsworth, looking on, the inventor was extolled as the father of television and his statue was placed in the pantheon of famous Americans of the Capitol’s National Statuary Hall"),
@@ -60,20 +107,238 @@ public class Corpi
 //            new SentenceNode("S7",NS,"Push towards the cliff edge.",lts,3.14159d),
 //            new SentenceNode("S8",NS,"Push towards the cliff edge.",lts,3.14159d)
 //    );
-//    
-    /**
-     * Get corpus (sentences).
-     * @return 
-     */
-//    public static Map<String,SentenceNode> getVerticesForEdges()
-//    {
-//        return disc2Map;
-//    }
-//    
-//    public static Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> getEdges()
-//    {
-//        return disc2Edges;
-//    }
+//
+    public static List<RawDocument> testDocuments()
+            throws URISyntaxException
+    {
+        List<RawDocument> docs = new ArrayList<>();
+        
+        docs.add(new RawDocument(new DocumentCategory(1,"television inventor"),
+                "American inventor Philo T. Farnsworth, a pioneer of television, was accorded what many believe was long overdue glory Wednesday when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."
+                + " American inventor Philo T. Farnsworth, a pioneer of television, was honored when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."
+                + " With his 81-year-old widow, Elma Farnsworth, looking on, the inventor was extolled as the father of television and his statue was placed in the pantheon of famous Americans of the Capitol’s National Statuary Hall."
+                + " The clear favorite was one Philo T. Farnsworth, an inventor who is considered the father of television."
+                + " If Utahans have their way, Philo T. Farnsworth will become a household name."));
+        docs.add(new RawDocument(new DocumentCategory(2,"Rocky"),
+                "The crew worked for more than two hours to separate the 8.5-foot bronze likeness of the city’s fictitious boxer from the steps of the Philadelphia Museum of Art, which has repeatedly insisted it doesn’t want the statue."));
+        docs.add(new RawDocument(new DocumentCategory(3,"Confederates"),
+                "Confederate statues litter the squares of Southern states."));
+        docs.add(new RawDocument(new DocumentCategory(4,"fox lazy dog"),
+                " The quick brown fox jumps over the lazy dog."
+                + " The quick brown hound jumps over the lazy fox."));
+        docs.add(new RawDocument(new DocumentCategory(5,"climate"),
+                " Tropical climate is one of the five major climate groups in the Köppen climate classification of heat."
+                + " Tropical climates are broadly located within 20 to 25 degrees of the equator and characterized by monthly average temperatures of 18 ℃ (64.4 ℉), or higher year-round, often following a seasonal rhythm and where annual precipitation is generally abundant and sunlight is intense."));
+        docs.add(new RawDocument(new DocumentCategory(6,"astrology horoscope"),
+                " Dear readers, as the sun shifts into fire sign Leo, the Tarot offers a collective message for all signs to ponder: Step up to the work presented by 5 of Swords, and invite the gifts of Knight of Cups."
+                + " The 5 of Swords card depicts two figures walking away in defeat, their swords lay on the ground, as the third figure watches in satisfaction carrying three swords in their hands."
+                + " In spirituality, there seems to be an overarching message that all we need is love and light, that rising above tribulations and becoming enlightened will end suffering."
+                + " That message is not what this card represents."
+                + " The energy we are being asked to experience is one of victory and defeat. We cannot bypass struggle and discomfort and all the “dark” aspects of life, we must move through them and allow them to fuel us."
+                + " Saturday’s first planetary aspect is an opposition between the moon in balanced Libra and Chiron in impulsive Aries."
+                + " At this moment, we may be trying to hold our ongoing wounds in check with Libra’s objectivity and patience."
+                + " Chiron in Aries is the wounding of the self and the ways that we have been hurt by simply being who we are."
+                + " The moon in Libra is in polarity to this, as Libra tends to put others first for the sake of peace, a practice that can carry wounds of its own."
+                + " The tension that this opposition story presents is an opportunity to bring our sense of self and personal authority back into some balance; by being objective enough to see that we are worthy as we are, yet being individualistic enough to stand in our authenticity."
+                + " The rest of the day passes with no major aspects, until the moon/Mercury square of the early evening."
+                + " The moon in Libra and Mercury in Cancer are both working strong, initiatory, cardinal powers, yet they do so at cross purposes."
+                + " This evening, it’s difficult to bring the somewhat aloof emotional tone of the moment into harmony with the raw, vulnerable sentiments that have prevailed for the last two months."
+                + " This edgy mood is further exacerbated by the moon opposing Mars in battle-ready Aries, an aspect that may bring emotional matters to a head tonight."));
+        docs.add(new RawDocument(new DocumentCategory(7,"NASA Mars"),
+                " With eight successful Mars landings, NASA is upping the ante with its newest rover."
+                + " It sports the latest landing tech, plus the most cameras and microphones ever assembled to capture the sights and sounds of Mars."
+                + " Its super-sanitized sample return tubes—for rocks that could hold evidence of past Martian life—are the cleanest items ever bound for space."
+                + " A helicopter is even tagging along for an otherworldly test flight."
+                + " This summer's third and final mission to Mars—after the United Arab Emirates' Hope orbiter and China's Quest for Heavenly Truth orbiter-rover combo—begins with a launch scheduled for Thursday morning from Cape Canaveral."
+                + " Like the other spacecraft, Perseverance should reach the red planet next February following a journey spanning seven months and more than 300 million miles (480 million kilometers)."
+                + " The six-wheeled, car-sized Perseverance is a copycat of NASA's Curiosity rover, prowling Mars since 2012, but with more upgrades and bulk."
+                + " Its 7-foot (2-meter) robotic arm has a stronger grip and bigger drill for collecting rock samples, and it's packed with 23 cameras, most of them in color, plus two more on Ingenuity, the hitchhiking helicopter."
+                + " The cameras will provide the first glimpse of a parachute billowing open at Mars, with two microphones letting Earthlings eavesdrop for the first time."
+                + " Once home to a river delta and lake, Jezero Crater is NASA's riskiest Martian landing site yet because of boulders and cliffs, hopefully avoided by the spacecraft's self-navigating systems."
+                + " Perseverance has more self-driving capability, too, so it can cover more ground than Curiosity."
+                + " The enhancements make for a higher mission price tag: nearly $3 billion."));
+        docs.add(new RawDocument(new DocumentCategory(9,"singleton"),
+                " Whew, it's hot!"));
+        docs.add(new RawDocument(new DocumentCategory(10,"prediction pisces"),
+                " Pisces 2021 Love Predictions."
+                + " If you are able to use communication well this year, then the Pisces 2021 horoscope predicts you should have a fair amount of luck in love."
+                + " You will be luckiest in love from February 25 to March 20, when Venus is in Pisces."
+                + " You will be most compatible with people who are creative and spend much of their time expanding their skills."
+                + " Pisces Career Prospects For 2021."
+                + " 2021 yearly predictions foretell that Jupiter will have positive effects on your work life this year."
+                + " You are likely to gain more satisfaction from everyday work tasks that may have bored you in the past."
+                + " This could be because you will work with new people or you may learn something new that can help to make your job more rewarding."
+                + " Either way, your career as a whole is likely to be more fulfilling this year."
+                + " If you are looking for more work this year, consider working online."
+                + " For Pisces people especially, 2021 is a great year to get money from creative projects done online." 
+                + " If you have creative talent, consider creative writing or making art on commission.Pisces Finance 2021 Forecasts."
+                + " This year, for one reason or another, you may be required to share your money and other resources with others."
+                + " When this happens, make sure to keep your cool and to compromise peacefully."
+                + " If you do not learn how to compromise with others in this way, then you are likely to find yourself in disagreements that could have been easily avoided."
+                + " If you manage to have your finances separate from everyone else’s, which is unlikely but can happen, then this is a great year to make investments."
+                + " However, before you do this, make sure to ask for advice as to what investments to make."
+                + " Pisces Family Predictions 2021."
+                + " Neptune in Pisces (for the entire year) will have a large effect on your personal life, including your family life."
+                + " This year, you may struggle to stay true to yourself."
+                + " In some cases, your family may be the one causing your internal conflicts." 
+                + " If you can, try to show your true self to your family."
+                + " Do not plan to have a baby out of pressure."
+                + " Health Horoscope For The FISHES."
+                + " In 2021, it’s best that you put most of the focus on health on your physical health."
+                + " You are likely to have to do things that will take a toll on your physical body."
+                + " For this reason, it’s best to exercise often and remember to eat right." 
+                + " This is also a great year to try a detox to cleanse the body."
+                + " Pisces Social Life Changes."
+                + " Venus finds itself in Capricorn at the beginning of the year (for most of January) and again in November throughout the rest of 2021."
+                + " When Venus is in this sign, you will feel more social than usual."
+                + " These months are the best time for hanging out with large groups of people and reconnecting with old friends."
+                + " 2021 Forecasts for Pisces Birthdays."
+                + " Jupiter will be in Scorpio for most of 2021, which will have a positive influence on your year for the better."
+                + " This planet will encourage feelings of self-love and boost your creativity."
+                + " This can help in so many areas of your life, including your romantic life, hobbies, and family life."
+                + " This year, you are also likely to feel more determined to try and learn new things."
+                + " Even if you are inexperienced with something, don’t be afraid to ask for help and try something new."
+                + " Learning new things and working on your hobbies is of the utmost importance this year."
+                + " Doing this will expand your happiness considerably during the 2021 Mercury retrograde."
+                + " Pisces 2021 Monthly Horoscopes."
+                + " Let’s take a closer look at the Pisces 2021 horoscope by breaking the year down into months."
+                + " Below are short summaries for each individual month."
+                + " January 2021 starts the year off by giving you a sense of nearly boundless creativity and productivity."
+                + " Use this time to work on projects, both at work and in your hobbies."
+                + " February 2021 encourages you to use this month for introspection."
+                + " What do you want out of the year?"
+                + " This also continues to be a great time to work on projects."
+                + " March 2021 puts the focus on your financial state."
+                + " The Sun and Venus will be in your sign for most of this month; this will boost your communication skills."
+                + " April 2021 splits the focus between your platonic relationships and your finances."
+                + " This is a great time to seek advice on your finances, as this combines those two aspects of your life."
+                + " May 2021 puts the focus on your family life!"
+                + " For most of this month, both Venus and the Sun will be in Taurus."
+                + " This will help to add stability in your relationships."
+                + " June 2021 encourages you to work on your romantic pursuits."
+                + " With Neptune in Pisces all this year, this is a great time to get into a new relationship or take the next step in your current relationship."
+                + " July 2021 won’t have much of a focus at all."
+                + " Your daily routine will take over."
+                + " Try to make time to spend time with your significant other and to work on your hobbies."
+                + " August 2021 will bless you with a boost of creativity and confidence."
+                + " This makes August a great time to try to make new friends and to work on your hobbies."
+                + " September 2021 is a mixed bag."
+                + " Until the 10th, Venus will be in Libra, which can help to boost your romantic life."
+                + " After this period, you will be most likely to shift the focus on your family."
+                + " October 2021 will have your emotions at a high point, which can make you seem dreamy at times."
+                + " Try to stay focused, as your family is likely to need you more than usual this month."
+                + " This may affect your relationships with your friends."
+                + " November 2021 graces you with high levels of confidence."
+                + " You are also likely to find some luck at work and in your finances."
+                + " December 2021 gives you time to prepare for the year ahead."
+                + " You will be able to see potential changes in the distance."
+                + " Use this month to plan your goals for 2022."
+                + " Conclusion."
+                + " As mentioned earlier, the yearly Pisces 2021 horoscope predicts a relaxed year ahead."
+                + " This is the perfect year for getting back to your hobbies and focusing on your family life."
+                + " Use this year to better yourself both intellectually and socially."
+                + " If you can do this, then 2021 should go well for you."));
+        docs.add(new RawDocument(new DocumentCategory(11,"prediction aries"),
+                " Libra people can achieve what they aspire for by making minor alterations in daily activities and avoiding significant changes."
+                + " Planetary aspects are favorable for improving your health and vitality during this year."
+                + " Jupiter and Saturn will help you to achieve your goals without much problem during the year 2021."
+                + " Venus and Jupiter will help you in forming love relationships."
+                + " There will be plenty of love and romance."
+                + " Social life will be enjoyable with the help of good astrological influences."
+                + " You will take measures to maintain your physical and emotional health."
+                + " You should be enthusiastic about doing whatever you want."
+                + " Libra 2021 Horoscope – A Look At The Year Ahead"
+                + " The Libra 2021 horoscope brings good news of hope and positive change!"
+                + " This year, you will need to rely on your relationships, both romantic and platonic, to help get you through the year."
+                + " It’s also a great year to revisit old friendships and hobbies."
+                + " This is a great year for both learning from the past and looking toward the future."
+                + " Libra 2021 Love Predictions"
+                + " In January, Venus will be in Capricorn, which may make you feel more intensely about your partner in a loving way, but generally less passionate."
+                + " Depending on what sign you are in a relationship with, this could help to improve your relationship or it may hurt it."
+                + " Libra horoscope 2021 suggests you follow your partner’s lead to know what the right thing to do is."
+                + " Libra Career Prospects For 2021"
+                + " Jupiter presides over your career this year, which can make work-related decisions tricky."
+                + " You are likely to be extremely busy this year, especially from March to July, when Jupiter will be in a Scorpio retrograde."
+                + " Even during this time, try to remain as professional as possible. This can open up new opportunities, like travel and meeting new people."
+                + " Libra Finance 2021 Forecasts"
+                + " Throughout 2021, Saturn will be in Capricorn."
+                + " This can make it difficult to manage your finances if you let yourself give in to material temptations."
+                + " You will find it harder to save money than usual."
+                + " This is not because of a lesser cash flow, but an increase in your spending."
+                + " Try to reduce your spending on nonessential items to keep your finances healthy."
+                + " Libra Family Predictions 2021"
+                + " Uranus spends most of 2021 in Aries, which will cause some dramatic changes in your family life."
+                + " These changes will most likely have to do with your parents or older relatives."
+                + " Expect a shift in your family’s power dynamic."
+                + " You may have to take care of your parents or older relatives for a few months, if not longer, beginning this year."
+                + " As far as your other family members are concerned, Venus in Capricorn (from November through the end of the year) helps you feel close to your family members and close community members."
+                + " It is likely that you will want to make improvements to your relationships, your physical home, have a baby during these two months."
+                + " Health Horoscope For The SCALES"
+                + " During 2021, Mars will have several transits through Aquarius, which is likely to feel more ambitious when it comes to your health-related goals."
+                + " However, it is also likely that you will try to improve your health, not for the sake of your well-being, but more for the sake of your looks."
+                + " Try not to push yourself."
+                + " Avoid crazy trendy diets."
+                + " If you can meet your fitness goals in a healthy way, that’s great!"
+                + " If not, you will end up being all the less healthy for it especially during the 2021 Mercury retograde periods."
+                + " Libra Social Life Changes"
+                + " Yearly astrology prediction for 2021 foretells that meeting new people and making new friends is vital to your success in many areas of life this year."
+                + " Whether you want to excel in your career or complete a project, your friends will be there to help you."
+                + " At the same time, your friends are likely to require your help this year."
+                + " Reach out to them whenever possible."
+                + " You never know when they might need you."
+                + " 2021 Forecasts for Libra Birthdays"
+                + " Jupiter enters Sagittarius in November."
+                + " This will encourage you to pick back up on old projects you may have left to the wayside or to begin new projects if you don’t have any currently in progress."
+                + " This is also a great time to reconnect with old friends or make new friends."
+                + " All in all, these last two months of the year will inspire positive change."
+                + " Libra 2021 Monthly Horoscopes"
+                + " The year seems promising as a whole."
+                + " Below are the individual blessings each month of 2021 has to offer to the lucky Libra-born."
+                + " January 2021 brings creativity into your personal life and happiness into your family life."
+                + " This month will keep you feeling zen."
+                + " Venus in Capricorn also helps to improve your communication."
+                + " February 2021 is the perfect month to focus on your romantic relationships."
+                + " Jupiter and Saturn both help to improve your communication skills."
+                + " Mars in Sagittarius encourages you to be more creative and passionate."
+                + " March 2021 focuses on your platonic social life, especially at work."
+                + " Make friends with your coworkers and help your friends when you can."
+                + " Your relationships with your children or young relatives will also improve in March."
+                + " April 2021 again focused on romance, especially in regards to your sex life."
+                + " Jupiter in Scorpio helps to jazz things up in the bedroom."
+                + " Saturn in Capricorn helps to keep your communication stable."
+                + " May 2021 has the Sun in Taurus encouraging deep introspection."
+                + " Focus on yourself, your mental and physical health, your career, and your family."
+                + " Try to keep all these things balanced."
+                + " This can be stressful, but as a Libra, “Balance” may as well be your middle name."
+                + " June 2021 can bring mood swings, which can put a dent in your relationships and slow down any progress you have been making on your hobby projects."
+                + " Try to work through the month, knowing that the coming months will be better."
+                + " July 2021 allows you to regain focus on your projects, both at work and in your hobbies."
+                + " Your energy levels are also likely to change."
+                + " This may impact your relationships with your family members, including your significant other."
+                + " August 2021 brings luck to your social life."
+                + " You will be more charming than usual this month, due to Venus being in Libra from mid-August to mid-September."
+                + " This will work to improve your romantic relationships."
+                + " September 2021 again focuses on romantic relationships."
+                + " You will have an outpouring of attention to others."
+                + " When Venus enters Scorpio in mid-September, you will be more confident and seductive than usual."
+                + " October 2021 makes you regain focus on work and others."
+                + " Try to spend less time focusing on yourself."
+                + " If you do this, then your social life and career will see improvements."
+                + " November 2021 may seem a bit confusing."
+                + " Should you focus on your job or travel?"
+                + " Focus on your goals or your friendships?"
+                + " No matter what you choose, you will likely succeed."
+                + " However, if you can’t make a choice, you will face the consequences of your indecision."
+                + " December 2021 encourages you to focus on your goals and complete any projects you started during the year."
+                + " You may need to distance yourself from your loved ones to do this."
+                + " However, once you complete your project, you’ll have the rest of the year to focus on your social life."
+                + " Conclusion"
+                + " Libra horoscope 2021 shows a promising year."
+                + " Whether you are hoping for blessings in your social life or your hobbies, you are sure to be in luck."
+                + " Make sure to spread your love and attention evenly to ensure the best year possible."));
+                        
+        return docs;
+    }
     
     public static List<SentenceNode> getVertices()
     {
@@ -89,11 +354,11 @@ public class Corpi
      * Get a list of sentences.
      * 
      * @param popl
-     * @param doc
+     * @param dcat
      * @return 
      */
-    public static List<SentenceNode> getSentList( Populate popl, String doc )
+    public static List<SentenceNode> getSentList( Populate popl, String doc, DocumentCategory dcat )
     {
-        return popl.extractSentences( doc, 0 );
+        return popl.extractSentences( doc, dcat );
     }
 }

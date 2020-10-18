@@ -7,6 +7,7 @@ package eu.discoveri.predikt.cluster;
 
 import eu.discoveri.predikt.graph.GraphEntity;
 import eu.discoveri.predikt.graph.SentenceNode;
+import java.io.Serializable;
 
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -16,7 +17,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class QRscore extends GraphEntity
+public class QRscore extends GraphEntity implements Serializable
 {
     @Relationship(type="SCORE")
     private SentenceNode            node1;

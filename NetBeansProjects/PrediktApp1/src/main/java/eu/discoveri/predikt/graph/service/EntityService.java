@@ -5,6 +5,7 @@
  */
 package eu.discoveri.predikt.graph.service;
 
+import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
 import eu.discoveri.predikt.graph.GraphEntity;
 
@@ -25,19 +26,13 @@ import org.neo4j.ogm.session.Session;
  */
 public abstract class EntityService<K,T extends GraphEntity> implements Service<K,T>
 {
-    // Load depth, here just entity simple properties, no relationships
-    // Default: 1, load simple properties of the entity and its immediate relations.
-    private static final int DEPTH_LIST = 1;
-    // Save entity and immediate relations.  -1 not for relationsships!
-    // Default: -1, save everything reachable from this entity that has been modified
-    private static final int DEPTH_ENTITY = 1;
     // Session.  Note Session is not thread safe.
-    protected Session session = DiscoveriSessionFactory.getInstance().getSession();
+    protected Session session = DiscoveriSessionFactory.getInstance().getNewSession();
 
     @Override
     public T find(Long id)
     {
-        return session.load(getEntityType(), id, DEPTH_ENTITY);
+        return session.load(getEntityType(), id, Constants.DEPTH_ENTITY);
     }
     
     @Override
@@ -50,7 +45,7 @@ public abstract class EntityService<K,T extends GraphEntity> implements Service<
     @Override
     public Iterable<T> findAll()
     {
-        return session.loadAll(getEntityType(), DEPTH_LIST);
+        return session.loadAll(getEntityType(), Constants.DEPTH_LIST);
     }
     
     @Override
@@ -74,8 +69,7 @@ public abstract class EntityService<K,T extends GraphEntity> implements Service<
     @Override
     public T createOrUpdate(T entity)
     {
-        System.out.println("Saving: " +entity.getName());
-        session.save(entity, DEPTH_ENTITY);
+        session.save(entity, Constants.DEPTH_ENTITY);
         return find(entity.getNid());
     }
 

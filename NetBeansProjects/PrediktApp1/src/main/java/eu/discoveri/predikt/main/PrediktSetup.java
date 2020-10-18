@@ -13,7 +13,7 @@ import eu.discoveri.predikt.graph.SentenceEdge;
 import eu.discoveri.predikt.graph.service.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
 import eu.discoveri.predikt.graph.service.SentenceNodeService;
-import eu.discoveri.predikt.sentences.CorpusProcess;
+import eu.discoveri.predikt.sentences.CorpusProcessDb;
 //import eu.discoveri.lemmas.db.LemmaDbBuild;
 
 import java.sql.Connection;
@@ -49,7 +49,7 @@ public class PrediktSetup
         List<SentenceNode> lsents = Corpi.getVertices();
         
         // Set up sentence analysis on above sentences/language/locale
-        CorpusProcess cp = new CorpusProcess( lsents, enSetup );
+        CorpusProcessDb cp = new CorpusProcessDb( lsents, enSetup );
         
         // Tokenize sentences
         cp.rawTokenizeSentenceCorpus(popl.getPme());
@@ -73,7 +73,7 @@ public class PrediktSetup
          */
         // Session
         DiscoveriSessionFactory discSess = DiscoveriSessionFactory.getInstance();
-        Session sess = discSess.getSession();
+        Session sess = discSess.getNewSession();
         // Db service
         SentenceNodeService sns = new SentenceNodeService();
         SentenceEdgeService ses = new SentenceEdgeService();

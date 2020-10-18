@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import eu.discoveri.predikt.config.Constants;
-import eu.discoveri.predikt.config.Setup;
 import eu.discoveri.predikt.exceptions.TokensListIsEmptyException;
 import eu.discoveri.predikt.resources.LangResources;
 import java.io.IOException;
@@ -15,6 +14,7 @@ import java.util.Iterator;
 
 import java.util.List;
 import java.util.Properties;
+import eu.discoveri.predikt.config.LangSetup;
 
 
 /**
@@ -103,7 +103,7 @@ public abstract class Language
      * @return 
      * @throws java.io.IOException 
      */
-    public List<Token> remStopWords( Setup setup, List<Token> tokens )
+    public List<Token> remStopWords( LangSetup setup, List<Token> tokens )
             throws IOException
     {
         List<String> stops = setup.loadStopWords();

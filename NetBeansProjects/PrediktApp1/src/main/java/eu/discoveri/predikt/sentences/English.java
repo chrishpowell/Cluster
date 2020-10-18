@@ -6,6 +6,7 @@
 package eu.discoveri.predikt.sentences;
 
 import eu.discoveri.predikt.exceptions.TokensListIsEmptyException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;

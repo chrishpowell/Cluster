@@ -2,6 +2,7 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.cluster.DocumentCategory;
 import eu.discoveri.predikt.sentences.LangCode;
 import eu.discoveri.predikt.sentences.Language;
 import java.io.FileInputStream;
@@ -90,27 +91,25 @@ public class Populate
      * @param doc
      * @return 
      */
-    public List<SentenceNode> extractSentences( String doc, int idx )
+    public List<SentenceNode> extractSentences( String doc, DocumentCategory dcat )
     {
+        int dIdx = 0;
         List<SentenceNode> sents = new ArrayList<>();
         
         // Extract sentences (creating a unique name)
         for( String sent: sdme.sentDetect(doc) )
         {
             // Create a roughly unique name
-            String uname = "S"+idx+"T"+System.currentTimeMillis();
+            String uname = "S"+dcat.getCategoryNum()+":"+(dIdx++)+"T"+System.currentTimeMillis();
             
             // Add sentence text to new Sentence
-            SentenceNode s = new SentenceNode(uname,sent);
+            SentenceNode s = new SentenceNode(uname,sent,dcat);
             
             // Add sentence probability
             s.addSentenceProbs( sdme.getSentenceProbabilities() );
             
             // Add to overall list of sentences
             sents.add(s);
-            
-            // 'Increment' sentence
-            ++idx;
         }
         
         return sents;

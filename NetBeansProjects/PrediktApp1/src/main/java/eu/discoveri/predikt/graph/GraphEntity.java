@@ -5,6 +5,7 @@
  */
 package eu.discoveri.predikt.graph;
 
+import eu.discoveri.predikt.config.Constants;
 import java.util.UUID;
 
 import org.neo4j.ogm.annotation.GeneratedValue;
@@ -44,6 +45,15 @@ public abstract class GraphEntity
         this.namespace = namespace;
         this.uuid = UUID.nameUUIDFromBytes((namespace+name).getBytes());
         this.sUUID = uuid.toString();
+    }
+    
+    /**
+     * Constructor.  Uses default namespace.
+     * @param name 
+     */
+    public GraphEntity( String name )
+    {
+        this(name,Constants.DEFNS);
     }
     
     /**

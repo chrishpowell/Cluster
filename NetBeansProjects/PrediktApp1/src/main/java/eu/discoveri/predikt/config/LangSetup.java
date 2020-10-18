@@ -19,7 +19,7 @@ import java.util.Properties;
  *
  * @author Chris Powell, Discoveri OU
  */
-public interface Setup
+public interface LangSetup
 {
     // Lemma setup
     public String getApostrophes();

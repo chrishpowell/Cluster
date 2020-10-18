@@ -20,7 +20,7 @@ import java.util.stream.DoubleStream;
  * @param <Void>
  * @email info@astrology.ninja
  */
-public class Token <Void> extends GraphEntity implements Predicate<Void>, Serializable
+public class Token <Void> extends GraphEntity implements Predicate<Void>
 {
     private String          token;
     private String          stem;
