@@ -1,43 +1,38 @@
 /*
- * Copyright (C) Discoveri SIA - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited.
- * Proprietary and confidential.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 package eu.discoveri.predikt3.graph;
 
 import com.zaxxer.hikari.HikariDataSource;
+import eu.discoveri.predikt3.sentences.Token;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 
 /**
- * Write cluster num (qrscw) in a thread.
- * @author Chris Powell, Discoveri OU
- * @email info@astrology.ninja
+ *
+ * @author chrispowell
  */
-public class DbWriteClusterNum implements Callable
+public class DbWriteSentenceTokens implements Callable
 {
     private final int               tnum;
     private final HikariDataSource  connection;
-    private final int               lIdx;
-    private final long              id;
+    private final List<Token>       tokens;
+    private final int               id;
     
-    /**
-     * Constructor.
-     * @param tnum Thread num.
-     * @param connection
-     * @param lIdx
-     * @param id
-     */
-    public DbWriteClusterNum( int tnum, HikariDataSource connection, int lIdx, long id )
+    
+    public DbWriteSentenceTokens( int tnum, HikariDataSource connection, List<Token> tokens, int id )
     {
         this.tnum = tnum;
         this.connection = connection;
+        this.tokens = tokens;
         this.id = id;
-        this.lIdx = lIdx;
     }
     
     /**
@@ -53,14 +48,21 @@ public class DbWriteClusterNum implements Callable
             conn = connection.getConnection();
             conn.setAutoCommit(false);
             
-            // Update Sentence
-            PreparedStatement up = conn.prepareStatement("update Sentence set louvainIdx = ? where id = ?");
-            up.setDouble(1, lIdx);
-            up.setLong(2, id);
-            up.execute();
-
-            conn.commit();
-            up.close();
+            // Update Sentence table with tokens
+            try ( PreparedStatement ins = conn.prepareStatement("insert into documents.Token values(default,?,?,?,?,?)") )
+            {
+                for( Token t: tokens )
+                {
+                    ins.setString(1, t.getToken());
+                    ins.setString(2, t.getStem());
+                    ins.setString(3, t.getLemma());
+                    ins.setString(4, t.getPOS());
+                    ins.setInt(5, id);
+                    ins.execute();
+                }
+                
+                conn.commit();
+            }
             conn.close();
         }
         catch( SQLException sex )

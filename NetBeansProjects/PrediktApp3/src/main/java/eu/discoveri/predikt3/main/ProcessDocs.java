@@ -8,8 +8,8 @@ package eu.discoveri.predikt3.main;
 
 import com.zaxxer.hikari.HikariDataSource;
 import cwts.networkanalysis.Clustering;
+//import org.apache.commons.math3.stat.StatUtils;
 
-import eu.discoveri.documents.DocumentDb;
 import eu.discoveri.predikt3.cluster.DocumentCategory;
 import eu.discoveri.predikt3.cluster.RawDocument;
 import eu.discoveri.predikt3.config.Constants;
@@ -28,6 +28,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -63,19 +64,21 @@ public class ProcessDocs
      * @throws URISyntaxException 
      * @throws java.sql.SQLException 
      */
+    static int  dIdx = 0;
+    static int largeDoc = 0, smallDoc = Integer.MAX_VALUE;
     public static long getSentsFromTestDocs( Connection conn, Populate popl )
             throws URISyntaxException, SQLException
     {
         // Sentence count
         int totSents = 0;
         
-        System.out.println("... Get sentences from List of docs");
+        System.out.println("... Get sentences from List of test docs");
         List<RawDocument> lrd = Corpi.testDocuments();
         
         // Get sentences of the docs
         System.out.println("... Form sentences from docs");
         totSents = lrd.stream().map((rd) -> {
-            eIdx++;
+            dIdx++;
             return rd;            
         }).map((rd) -> {
             // Sentences per document
@@ -101,8 +104,8 @@ public class ProcessDocs
             return lsn;
         }).map((lsn) -> lsn.size()).reduce(totSents, Integer::sum);
     
-        System.out.println("    > Num. documents: " +eIdx+ ", Num. sentences written: " +totSents);
-        System.out.println("    > Smallest doc contains " +smallDoc+ " sentences, largest contains " +largeDoc+ " sentences.  Average doc. size: " +(int)(totSents/eIdx));
+        System.out.println("    > Num. documents: " +dIdx+ ", Num. sentences written: " +totSents);
+        System.out.println("    > Smallest doc contains " +smallDoc+ " sentences, largest contains " +largeDoc+ " sentences.  Average doc. size: " +(int)(totSents/dIdx));
         
         return totSents;
     }
@@ -125,40 +128,41 @@ public class ProcessDocs
     /**
      * Read docs from (MySQL) database, generate sentences.
      * 
-     * @param conn1
+     * @param conn
      * @param popl
+     * @return 
      * @throws SQLException 
      */
-    static int  eIdx = -1, largeDoc = 0, smallDoc = Integer.MAX_VALUE;
-    public static long populateGraphWithSents( Connection conn, Populate popl )
+    public static int populateSentsFromDbDocs( Connection conn, Populate popl )
             throws SQLException
     {
+        int  eIdx = 0, largeDoc1 = 0, smallDoc1 = Integer.MAX_VALUE;
+        
         // Count of sentences written
-        long totSents = 0;
+        int totSents = 0;
         System.out.println("      Get all documents from Rdb");
         
         // Exclude documents with given titles
         String excl[] = {"%Privacy Policy%", "%Terms of Service%"};
-        PreparedStatement docs = conn.prepareStatement("select title,content from Document where lower(title) NOT LIKE ? AND lower(title) NOT LIKE ?");
+        PreparedStatement docs = conn.prepareStatement("select dId,title,content from Document where lower(title) NOT LIKE ? AND lower(title) NOT LIKE ?");
         docs.setString(1, excl[0].toLowerCase());
         docs.setString(2, excl[1].toLowerCase());
         ResultSet rsDocs = docs.executeQuery();
         
         // Get sentences of the docs
-        System.out.println("... Form sentences from docs (Stream of List)");
+        System.out.println("... Form sentences from docs");
         
         while( rsDocs.next() )
         {
-            eIdx++;
-//            Stream.Builder<List<SentenceNode>> llsn = Stream.builder();
+            ++eIdx;
             
             // (Sentences per document, memory should be OK)
-            List<SentenceNode> lsn = popl.extractSentences(rsDocs.getString("content"),new DocumentCategory());  // ***** @TODO: Get DCat from db
+            List<SentenceNode> lsn = popl.extractSentences(rsDocs.getString("content"),new DocumentCategory(rsDocs.getLong("dId")));  // ***** @TODO: Get DCat from db
             System.out.println("Num. sentences in doc: " +eIdx+ " is " +lsn.size());
-            if( lsn.size() > largeDoc )
-                largeDoc = lsn.size();
-            if( lsn.size() < smallDoc )
-                smallDoc = lsn.size();
+            if( lsn.size() > largeDoc1 )
+                largeDoc1 = lsn.size();
+            if( lsn.size() < smallDoc1 )
+                smallDoc1 = lsn.size();
 
             // Write to Db
             SentenceNode.persistListSentences(conn, lsn);
@@ -167,11 +171,20 @@ public class ProcessDocs
             totSents += lsn.size();
         }
 
-        // Note: Doc. index starts at zero
-        System.out.println("    > Num. documents: " +(eIdx+1)+ ", Num. sentences written: " +totSents);
-        System.out.println("    > Smallest doc contains " +smallDoc+ " sentences, largest contains " +largeDoc+ " sentences.  Average doc. size: " +(int)(totSents/eIdx));
+        // Note: Doc. index starts at 1.
+        System.out.println("    > Num. documents: " +eIdx+ ", Num. sentences written: " +totSents);
+        System.out.println("    > Smallest doc contains " +smallDoc1+ " sentences, largest contains " +largeDoc1+ " sentences.  Average doc. size: " +(int)(totSents/eIdx));
         
         return totSents;
+    }
+    
+    /**
+     * Dump the clusters array.
+     * @param npc 
+     */
+    public static void dumpClusterArray( int[][] npc )
+    {
+        System.out.println(Arrays.deepToString(npc));
     }
     
     
@@ -214,10 +227,8 @@ public class ProcessDocs
         Connection docDb1 =  docDbPool.getConnection();                         // "Permanent" connection
 
         // Now empty tables
-        DbUtils.emptyDocumentsTable(docDbPool.getConnection(), "Sentence");
-        DbUtils.emptyDocumentsTable(docDbPool.getConnection(), "QRscoreCW");
-        DbUtils.emptyDocumentsTable(docDbPool.getConnection(), "CWcount");
-        DbUtils.emptyDocumentsTable(docDbPool.getConnection(), "Token");
+        System.out.println("*** Empty tables: Sentence, Token, CWcount, QRscoreCW");
+        DbUtils.emptySentenceTables(docDb1);
         
         // Set up the futures
         ExecutorService execsrv = Executors.newCachedThreadPool();
@@ -245,7 +256,7 @@ public class ProcessDocs
         // 1a. Get sentences from raw text
 //        long numSents = populateGraphDbFromMemory(sns);
         // 1b. Get sentences from document db. (What if 250k sentences?)
-//        long numSents = populateGraphWithSents( conn1, popl, sns );
+//        int numSents = populateSentsFromDbDocs( docDb1, popl );
         // 1c. Get sentences from test docs
         int numSents = (int)getSentsFromTestDocs(docDb1,popl);
         System.out.println("...> Num. sentences: " +numSents);
@@ -253,14 +264,15 @@ public class ProcessDocs
         // 2. Set up sentence analysis on above sentences/language/locale
         System.out.println("... Start sentence analysis");
         CorpusProcessDb cp = new CorpusProcessDb( docDbPool, enSetup );
-        cp.setSentCount(numSents);
+        cp.setSentCount(numSents);                                              // Set count of sentences
 
         // 3. ??
         // 4. Tokenize sentences (and remove OOB chars)
         // 5. Clean up tokens (punctuation,numbers,unwanted POStags etc.)
         // 6. Get lemmas
-        System.out.println("... Process and clean sentences (by page)");
-        cp.processSentencesByPage(docDb1, popl.getPme());
+        System.out.println("... Process and clean sentences");
+//        cp.processSentencesByPage(docDb1, popl.getPme());
+        cp.processSentencesById(docDb1, cs, popl.getPme(), Constants.PAGSIZE);
 
         // Timer
         en = Instant.now();
@@ -301,12 +313,12 @@ public class ProcessDocs
 
         // 9. Form weighted edges ("SIMILARTO") between similar sentences. And
         // add Louvain index
-        System.out.println("... Form weighted similarity edges");
-        cp.writeClusterIndices(docDbPool.getConnection(),cs,numSents);
+//        System.out.println("... Form weighted similarity edges");
+//        cp.writeClusterIndices(docDbPool.getConnection(),cs,numSents);
         // Timer
-        Instant en2 = Instant.now();
-        secs = Duration.between(en1,en2).toSeconds();
-        System.out.println("  ..> Weighted similarity time (secs): " + secs );
+//        Instant en2 = Instant.now();
+//        secs = Duration.between(en1,en2).toSeconds();
+//        System.out.println("  ..> Weighted similarity time (secs): " + secs );
 
         // Timer
         en = Instant.now();
@@ -323,14 +335,25 @@ public class ProcessDocs
         st = Instant.now();
         
         System.out.println("---------------------------------------------------");
-        // 10. Clustering
+        // 10a. Stats
+//        System.out.println(".................[Score stats]...................................");
+//        double[] stats = cp.adjustScores(docDb1);
+//        System.out.println("Max: " +StatUtils.max(stats)+ ", min: " +StatUtils.min(stats)+ ", mean: " +StatUtils.mean(stats)+ ", var: " +StatUtils.variance(stats));
+//        double[] modes = StatUtils.mode(stats);
+//        System.out.println("Mode(s): ");
+//        for( double mode: modes ) { System.out.print(mode+""); }
+//        System.out.println("\r\n.................................................................");
+        
+        // 10b. Clustering
         try
         {
             System.out.println("... Generate sentence clusters");
-            Clustering c = cp.clustersGen(docDbPool.getConnection());
+            Clustering c = cp.clustersGen(docDbPool.getConnection(),numSents);
                     
             System.out.println("  > Num. clusters and 'non' clusters: " +c.getNClusters());
             int[][] npc = c.getNodesPerCluster();
+            dumpClusterArray(npc);
+            
             // Check for 'real' (len>1) clusters
             int ll = 0;
             for( int[] eachRow: npc )

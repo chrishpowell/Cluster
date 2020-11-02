@@ -12,7 +12,7 @@ public class Constants
 {
     // Resource root
     public static final String      RESROOT = "/home/chrispowell/NetBeansProjects/";
-    public static final String      PROJECT = "PrediktApp1/";
+    public static final String      PROJECT = "PrediktApp3/";
     public static final String      PROJSUBPATH = "src/main/java/";
     public static final String      ROOT = RESROOT+PROJECT+PROJSUBPATH;
     
@@ -26,15 +26,15 @@ public class Constants
     // Default server
     public static final String      DEFSRV = "eu.discoveri";
     // Default namespace
-    public static final String      DEFNS = "eu.discoveri.predikt";
+    public static final String      DEFNS = "eu.discoveri.predikt3";
     
     // Resource path and files
-    public static final String      RESMODELS = ROOT+"eu/discoveri/predikt/resources/";
+    public static final String      RESMODELS = ROOT+"eu/discoveri/predikt3/resources/";
     
     // English sentences lengths
     public static final int         ENGLISHGOODMAXLEN = 20;
     public static final int         ENGLISHDIFFICULTLEN = 29;
-    public static final int         ENGLISHBADMAXLEN = 35;                        // Sentences longer than this get dropped.
+    public static final int         ENGLISHBADMAXLEN = 35;                        // Sentences words longer than this get dropped.
     
     // OpenNLP model files (built via Language class)
     public static final String      SENTMODEL = "Sentence";
@@ -71,39 +71,26 @@ public class Constants
     public static final double      NODESCOREDEF = 0.25;
     // Node UUID
     public static final String      GRAPHNAMESPACE = "eu.discoveri.languagegraph";
-    // Neo4J packages required for SessionFactory
-    public static final String      PKGGRAPH = DEFNS+".graph";
-    public static final String      PKGSENTS = DEFNS+".sentences";
-    public static final String      PKGCLUSTER = DEFNS +".cluster";
-    public static final String      PKGTESTS = DEFNS +".tests";
-    
     
     // Text Ranking parameters (?? No longer used?)
-    public static final double      TEXTRANK_DAMPING_FACTOR = 0.85D;
-    public static final double      SCORECONVERGE = 0.005D;
-    public static final int         NUMITERS = 100;
-    
-    // Neo4j
-    public static final String      NEO4J = "neo4j://localhost";
-    public static final String      USER = "neo4j", PWD = "karabiner";
+//    public static final double      TEXTRANK_DAMPING_FACTOR = 0.85D;
+//    public static final double      SCORECONVERGE = 0.005D;
+//    public static final int         NUMITERS = 100;
+
     // Transaction max. duration
     public static final int         TXDURATION = 30;                            // Secs
     // If sentence edge weight too small do not persist edge
-    public static final double      EDGEWEIGHTMIN = 0.5;
-    // Virtual servers
-    public static final String      VSRV1 = "localhost";
-    public static final int         PORT1 = 7687;
-    public static final String      VSRV2 = "localhost";
-    public static final int         PORT2 = 9999;
+    public static final double      EDGEWEIGHTMIN = 0.75;
+    // Do NOT make edge weight zero.  Currently causes clustering problems
+    public static final double      EDGEWEIGHTNRZERO = 0.000001;
+
     // Pagination
     public static final int         PAGSIZE = 7;
+    public static final int         MAXSENTLEN = 511;                           // "Sentence" this long is probably nonsense
     
-    // Load depth, here just entity simple properties, no relationships
-    // Default: 1, load simple properties of the entity and its immediate relations.
-    public static final int         DEPTH_LIST = 1;
-    // Save entity and immediate relations.  -1 not for relationsships!
-    // Default: -1, save everything reachable from this entity that has been modified
-    public static final int         DEPTH_ENTITY = 1;
+    // MySQL settings
+    public static final int         MAXCONNECTIONS = 200;                       // mysql>set global Max_connections=#
+    public static final int         TIMEOUTMS = 30000;                          // mS.  Be aware a timeout can mean a write failure.
     
     // Db threads, retry consts for locking clash
     public static final int         THREADLISTSIZE = 1;

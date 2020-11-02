@@ -108,6 +108,33 @@ public class Corpi
 //            new SentenceNode("S8",NS,"Push towards the cliff edge.",lts,3.14159d)
 //    );
 //
+    public static List<RawDocument> testDocuments1()
+        throws URISyntaxException
+    {
+        List<RawDocument> docs = new ArrayList<>();
+        docs.add( new RawDocument(new DocumentCategory(1,"test"),
+                "At this moment, we may be trying to hold our ongoing wounds in check with Libra’s objectivity and patience."
+                + " Its super-sanitized sample return tubes—for rocks that could hold evidence of past Martian life—are the cleanest items ever bound for space."));
+        
+        return docs;
+    }
+    
+    public static List<RawDocument> testDocuments2()
+        throws URISyntaxException
+    {
+        List<RawDocument> docs = new ArrayList<>();
+        docs.add( new RawDocument(new DocumentCategory(1,"test"),
+                "American inventor Philo T. Farnsworth, a pioneer of television, was accorded what many believe was long overdue glory Wednesday when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."
+                + " American inventor Philo T. Farnsworth, a pioneer of television, was honored when a 7-foot bronze likeness of the electronics genius was dedicated in the U.S. Capitol."
+                + " With his 81-year-old widow, Elma Farnsworth, looking on, the inventor was extolled as the father of television and his statue was placed in the pantheon of famous Americans of the Capitol’s National Statuary Hall."
+                + " The clear favorite was one Philo T. Farnsworth, an inventor who is considered the father of television."
+                + " Its super-sanitized sample return tubes—for rocks that could hold evidence of past Martian life—are the cleanest items ever bound for space."
+                + " Its 7-foot (2-meter) robotic arm has a stronger grip and bigger drill for collecting rock samples, and it's packed with 23 cameras, most of them in color, plus two more on Ingenuity, the hitchhiking helicopter."
+        ));
+        
+        return docs;
+    }
+    
     public static List<RawDocument> testDocuments()
             throws URISyntaxException
     {
@@ -336,6 +363,14 @@ public class Corpi
                 + " Libra horoscope 2021 shows a promising year."
                 + " Whether you are hoping for blessings in your social life or your hobbies, you are sure to be in luck."
                 + " Make sure to spread your love and attention evenly to ensure the best year possible."));
+            docs.add(new RawDocument(new DocumentCategory(12,"tokenless"),
+                " The the the."
+                + "          ."
+                + " 18."
+                + " 12/12 SLIDES SHARE SHARE TWEET SHARE EMAIL 1/12 SLIDES Next Slide AdChoices 1 2 3 4 YOU MAY LIKE Ad Microsoft Savvy Americans do this to earn an extra $1,394 per month in retirement The Motley Fool New Car Gadget Magically Removes Scratches & Dents NanoMagic 23 Gadgets That Could Sell Out Before the Holidays Gadgets Post More from Astrofame The Reason Why Each Zodiac Sign Is Difficult To Love Your Weekly Horoscope: August 24 - 30 Who Is Your Zodiac Sign Sexually Incompatible With?"
+                + " ..."));
+            docs.add(new RawDocument(new DocumentCategory(13,"tokenless"),"")
+        );
                         
         return docs;
     }

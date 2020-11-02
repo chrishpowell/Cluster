@@ -16,7 +16,7 @@ import eu.discoveri.predikt3.graph.GraphEntity;
 public class DocumentCategory extends GraphEntity
 {
     // Number or category for a document
-    private final int categoryNum;
+    private final long categoryNum;
 
     /**
      * Constructor.
@@ -24,7 +24,7 @@ public class DocumentCategory extends GraphEntity
      * @param name Name of category (eg:"Ships", "Ceiling wax")
      * @param namespace  Namespace of name.
      */
-    public DocumentCategory(int categoryNum, String name, String namespace)
+    public DocumentCategory(long categoryNum, String name, String namespace)
     {
         super(name, namespace);
         this.categoryNum = categoryNum;
@@ -40,14 +40,18 @@ public class DocumentCategory extends GraphEntity
         this(categoryNum,name,"eu.discoveri.predikt");
     }
 
-    public DocumentCategory()
+    /**
+     * Constructor.
+     * @param categoryNum 
+     */
+    public DocumentCategory(long categoryNum)
     {
-        this(-1,"","");
+        this(categoryNum,"","eu.discoveri.predikt");
     }
 
     /**
      * Category number.
      * @return 
      */
-    public int getCategoryNum() { return categoryNum; }
+    public long getCategoryNum() { return categoryNum; }
 }

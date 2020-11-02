@@ -31,12 +31,13 @@ import eu.discoveri.predikt3.lemmatizer.Lemmatizer;
 import eu.discoveri.predikt3.sentences.Language;
 import eu.discoveri.predikt3.sentences.Nul;
 import eu.discoveri.predikt3.sentences.Token;
-import eu.discoveri.louvaincluster.Clusters;
 import eu.discoveri.predikt3.graph.DbWriteClusterNum;
+import eu.discoveri.louvaincluster.Clusters;
+import eu.discoveri.louvaincluster.NoClustersException;
+import eu.discoveri.predikt3.cluster.SentenceClusterNum;
+import eu.discoveri.predikt3.graph.DbWriteSentenceTokens;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -129,20 +130,19 @@ public class CorpusProcessDb
         int SKIP = 0;
         int LIMIT = Constants.PAGSIZE;
 
-        System.out.println("     Tokenize, clean tokens then and lemmatize by page.  Please wait...");
+        System.out.println("     Tokenize, clean tokens then lemmatize by page.  Please wait...");
         System.out.print("     ...Pages: ");
+        
         while( true )
         {
             List<SentenceNode> lsn = SentenceNode.sentenceByPage( conn, SKIP, LIMIT );
             if( lsn.isEmpty() ) break;
 
             System.out.print(" ("+(SKIP+1)+")");
-            rawTokenizeSentenceCorpus(pme,lsn);
-
-            cleanTokensSentenceCorpus(lsn);
-
-            lemmatizeSentenceCorpusViaRdb(conn, lsn);
-
+            
+            // Process this set of sentences
+            processSentenceList(conn,pme,lsn);
+            
             // Persist and set the Sentence (node/MySQL) id
             for( SentenceNode sn: lsn )
             {
@@ -156,7 +156,135 @@ public class CorpusProcessDb
     }
     
     /**
-     * Process sentences by Id (LIMIT at a time).  ****============= TBD =============****
+     * Process sentences by Id.
+     * 
+     * @param conn
+     * @param cs
+     * @param pme
+     * @param pageSiz 
+     * @throws java.sql.SQLException 
+     * @throws eu.discoveri.predikt3.exceptions.EmptySentenceListException 
+     * @throws eu.discoveri.predikt3.exceptions.SentenceIsEmptyException 
+     * @throws eu.discoveri.predikt3.exceptions.TokensListIsEmptyException 
+     * @throws java.io.IOException 
+     * @throws eu.discoveri.predikt3.exceptions.SentenceNotPersistedException 
+     * @throws java.lang.InterruptedException 
+     * @throws java.util.concurrent.ExecutionException 
+     */
+    public void processSentencesById( Connection conn, CompletionService<Integer> cs, POSTaggerME pme, int pageSiz )
+            throws SQLException, EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, IOException, SentenceNotPersistedException, InterruptedException, ExecutionException
+    {
+        int threadCount1 = 0;
+        if( sentCount < 1 )
+            throw new SentenceNotPersistedException("No sentences on database?");
+        
+        System.out.println("     Tokenize, clean tokens then lemmatize by page.  Please wait...");
+        System.out.print("     ...Pages: ");
+        
+        // Form statement
+        PreparedStatement ps = ps4SentenceById(conn,pageSiz);
+        
+        // Get pages of Sentences
+        for( int ii=1; ii<=sentCount; ii+=pageSiz )
+        {
+            // List of sentences (page: pageSiz)
+            List<SentenceNode> lsn = sentenceById(ps,pageSiz,ii);
+            
+            System.out.print(" ("+ii+")");
+            
+            // Process this set of sentences
+            processSentenceList(conn,pme,lsn);
+            
+            // Persist and set the Sentence (node/MySQL) id
+            for( SentenceNode sn: lsn )
+                { cs.submit(new DbWriteSentenceTokens(threadCount1++,connection,sn.getTokens(),sn.getNid())); }
+        }
+        
+        // For each completion thread
+        for( int ii=0; ii<threadCount1; ii++ )
+        {
+            int l1 = cs.take().get();
+        }
+        
+        System.out.println("");
+    }
+    
+    /**
+     * Create PreparedStatement for getting sentences by Id.
+     * 
+     * @param conn
+     * @param pageSiz
+     * @return
+     * @throws SQLException 
+     */
+    public PreparedStatement ps4SentenceById(Connection conn,int pageSiz)
+            throws SQLException
+    {
+        String sql = "select id,sentence,clusterNum from Sentence where id in (";
+        for( int ii=1; ii<=pageSiz-1; ii++ )
+            sql += "?,";
+        sql += "?) order by id";
+        
+        return conn.prepareStatement(sql);
+    }
+    
+    /**
+     * Get Sentence(s) by Id. PreparedStatement can be built using ps4SentenceById().
+     * Eg:<samp>
+        for( int offs=1; offs<=sentCount; offs+=PAGESIZ )
+            { List<SentenceNode> lsn = sentenceById(ps,PAGESIZ,offs); }</samp>
+     * @param ps PreparedStatement to get Sentence(s).
+     * @param pageSiz Size of pagination.
+     * @param offset Offset to next page
+     * @return
+     * @throws SQLException 
+     */
+    public List<SentenceNode> sentenceById( PreparedStatement ps, int pageSiz, long offset )
+            throws SQLException
+    {
+        List<SentenceNode> lsSN = new ArrayList<>();
+        for( long id=offset; id<=offset+pageSiz-1; id+=pageSiz )
+        {
+            for( int ii=1; ii<=pageSiz; ii++ )
+                ps.setLong(ii, id+ii-1);
+
+            ResultSet res = ps.executeQuery();
+            while( res.next() )
+            {
+                SentenceNode sn = new SentenceNode(res.getInt("id"),"",res.getString("sentence"));
+                sn.setSentenceClusterNum(new SentenceClusterNum(res.getInt("clusterNum")));
+                lsSN.add(sn);
+            }
+        }
+        
+        return lsSN;
+    }
+    
+    /**
+     * Tokenize list of sentences.
+     * 
+     * @param conn
+     * @param pme 
+     * @param lsn 
+     * @throws eu.discoveri.predikt3.exceptions.EmptySentenceListException 
+     * @throws eu.discoveri.predikt3.exceptions.SentenceIsEmptyException 
+     * @throws eu.discoveri.predikt3.exceptions.TokensListIsEmptyException 
+     * @throws java.io.IOException 
+     * @throws java.sql.SQLException 
+     * @throws eu.discoveri.predikt3.exceptions.SentenceNotPersistedException 
+     */
+    public void processSentenceList( Connection conn, POSTaggerME pme, List<SentenceNode> lsn )
+            throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, IOException, SQLException, SentenceNotPersistedException
+    {
+        rawTokenizeSentenceCorpus(pme, lsn);
+
+        cleanTokensSentenceCorpus(pme, lsn);
+
+        lemmatizeSentenceCorpusViaRdb(conn, lsn);
+    }
+    
+    /**
+     * Process sentences by Id.
      * @param conn
      * @param pme
      * @throws EmptySentenceListException
@@ -165,11 +293,34 @@ public class CorpusProcessDb
      * @throws IOException
      * @throws SQLException 
      */
-    public void processSentencesById( Connection conn, POSTaggerME pme )
-            throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, IOException, SQLException
-    {
-
-    }
+//    public void processSentencesById( Connection conn, POSTaggerME pme )
+//            throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, IOException, SQLException
+//    {
+//        long idBegin=-1, idEnd=-1;
+//        
+//        Statement st = conn.createStatement();
+//        
+//        // Start/End ids
+//        ResultSet idSt = st.executeQuery("select min(id) idBegin from Sentence");
+//        while( idSt.next() ) { idBegin = idSt.getInt("idBegin"); }
+//        ResultSet idEn = st.executeQuery("select max(id) idEnd from Sentence");
+//        while( idEn.next() ) { idEnd = idEn.getInt("idEnd"); }
+//
+//        PreparedStatement sents = conn.prepareStatement("select id, sentence, langCode, locale, token, lemma, pos from Sentence,Token where sn=Sentence.id and sn=? order by Sentence.id limit ?");
+//        
+//        for( int ii=idBegin; ii<=idEnd; ii++ )
+//        sents.setInt(1,offset);
+//        sents.setInt(2,pageSize);
+//        ResultSet res = sents.executeQuery();
+//        while( res.next() )
+//        {
+//            // Products are why RdBs are annoying...
+//            List<SentenceNode> lsn = new ArrayList<>();
+//            List<Token> lt = new ArrayList<>();
+//            
+//            lsn.add(new SentenceNode());
+//        }
+//    }
     
     /**
      * Get POS for each token.
@@ -265,7 +416,7 @@ public class CorpusProcessDb
         // Tokenize and clean
         for( SentenceNode s: sents )
         {
-            // 1. Remove OOB characters, update the sentence string
+            // 1. Remove OOB characters ('nulls' etc.), update the sentence string
             s.updateSentence( l.remOOBChars(s.getSentence()) );
             // Tokenize
             s.rawTokPosThisSentence(pme);
@@ -374,13 +525,14 @@ public class CorpusProcessDb
      * *** MAIN CLEAN UP ***
      * Clean up punctuation, apostrophes, stopwords, numbers.
      * 
+     * @param pme
      * @param sents
      * @return
      * @throws EmptySentenceListException 
      * @throws TokensListIsEmptyException 
      * @throws java.io.IOException 
      */
-    public Iterable<SentenceNode> cleanTokensSentenceCorpus( Iterable<SentenceNode> sents )
+    public Iterable<SentenceNode> cleanTokensSentenceCorpus( POSTaggerME pme, Iterable<SentenceNode> sents )
             throws EmptySentenceListException, TokensListIsEmptyException, IOException
     {
         // Check we have sentences
@@ -396,7 +548,7 @@ public class CorpusProcessDb
             s.setTokens(lts);
 
             // 3. All tokens now to lowercase and remove dashes, punctuation etc. (Calls clean()).
-            s.cleanTokens();
+            s.cleanTokens(pme);
 
             // 4. Remove stopwords
             lts = l.remStopWords(setup,lts);
@@ -661,7 +813,7 @@ public class CorpusProcessDb
                 }
             }
         }
-        
+
         return wCountQR;
     }
 
@@ -768,13 +920,14 @@ public class CorpusProcessDb
                                         List<Token> wordsR = snR.getTokens();
 
                                         /*
-                                         * Now to compare tokens/lemmas
+                                         * Now to compare Token:lemmas
                                          */
-                                        // Map of count of common words between two sentences <Word,count of Word per sentence pair>
+                                        // Map of count of common lemmas between two sentences <Word,count of Word per sentence pair>
                                         Map<String,CWcount> wCountQR = lemmaCompare(wordsQ,wordsR,cqr);
+//                                        dumpLemmaCountMap(wCountQR);
 
-                                        // Ok, store the common (non stop,VB,NN) words counts for the sentence pairs
-                                        if( wCountQR.values().size() > 0 )
+                                        // Ok, store the common (non stop,VB,NN) words counts for the sentence pairs (if two or more words match)
+                                        if( wCountQR.values().size() > 1 )
                                         {
                                             cs.submit(new DbWriteScores(threadCount++,connection,new QRscoreCW(snQ,snR, new ArrayList<>(wCountQR.values()))));
                                         }
@@ -824,10 +977,10 @@ public class CorpusProcessDb
         System.out.println("Lemma sentence count:");
         Map<String,Integer> lemmaSentCount = new HashMap<>();
 
-        PreparedStatement tok = conn.prepareStatement("select token,count(distinct(sn)) as sc from Token,CWcount where token=matchWord group by matchWord");
+        PreparedStatement tok = conn.prepareStatement("select lemma,count(distinct(sn)) as sc from Token,CWcount where lemma=matchWord group by matchWord");
         ResultSet toks = tok.executeQuery();
         while( toks.next() )
-            { lemmaSentCount.put(toks.getString("token"),toks.getInt("sc")); }
+            { lemmaSentCount.put(toks.getString("lemma"),toks.getInt("sc")); }
         
         return lemmaSentCount;
     }
@@ -855,7 +1008,7 @@ public class CorpusProcessDb
         int threadCount1 = 0;
         
         // Get QR matched words
-        PreparedStatement qrsc = conn.prepareStatement("select matchWord,countQ,countR,qrscwId from CWcount where qrscwId=? order by qrscwId");
+        PreparedStatement qrsc = conn.prepareStatement("select id,matchWord,countQ,countR,qrscwId from CWcount where qrscwId=? order by qrscwId");
         
         // Lemma count (per sentence)
         Map<String,Integer> lemmaSentCount = lemmaSentCount(conn);
@@ -867,6 +1020,7 @@ public class CorpusProcessDb
         while( idSt.next() ) { idBegin = idSt.getInt("idBegin"); }
         ResultSet idEn = st.executeQuery("select max(qrscwId) idEnd from CWcount");
         while( idEn.next() ) { idEnd = idEn.getInt("idEnd"); }
+        st.close();
         
         // Update similarity scores (batch these?)
         // for each sentence pair in QRscoreCW
@@ -891,10 +1045,11 @@ public class CorpusProcessDb
             }
             
             // Update the score (if significant) and index the relevant Sentences
-            if( score > Constants.EDGEWEIGHTMIN )
-            {
-                cs.submit(new DbWriteSimilarity(threadCount1++,connection,score,id));
-            }
+//            if( score < Constants.EDGEWEIGHTMIN )
+//            {
+//                score = Constants.EDGEWEIGHTNRZERO;
+//            }
+            cs.submit(new DbWriteSimilarity(threadCount1++,connection,score,id));
         }
         
         System.out.println("Similarity threadCount: " +threadCount1+ " waiting for thread completion...");
@@ -904,6 +1059,35 @@ public class CorpusProcessDb
         {
             int l1 = cs.take().get();
         }
+    }
+    
+    /**
+     * Scores statistics.
+     * 
+     * @param conn
+     * @return
+     * @throws SQLException 
+     */
+    public double[] adjustScores(Connection conn)
+            throws SQLException
+    {
+        // Num. entries
+        long    sCnt = 0;
+        int     sIdx = 0;
+        
+        // Get QR matched words
+        Statement qrsc = conn.createStatement();
+        ResultSet sc = qrsc.executeQuery("select count(*) as sc from QRscoreCW");
+        while( sc.next() ) { sCnt = sc.getLong("sc"); }
+        double[] scEntries = new double[(int)sCnt];
+        
+        ResultSet scores = qrsc.executeQuery("select score from QRscoreCW");
+        while( scores.next() )
+        {
+            scEntries[sIdx++] = scores.getDouble("score");
+        }
+        
+        return scEntries;
     }
     
     /**
@@ -950,23 +1134,23 @@ public class CorpusProcessDb
             while( res.next() )
             {
                 double score = res.getDouble("score");
-                if( score > Constants.EDGEWEIGHTMIN )
-                {
+//                if( score > Constants.EDGEWEIGHTMIN )
+//                {
                     int snQ = res.getInt("sIdQ");
                     int snR = res.getInt("sIdR");
                     
                     // Check if already set
                     if( !sids[snQ] ) // Q of pair
                     {
-                        cs.submit(new DbWriteClusterNum(threadCount1++,connection,++louvainIdx,id));
+                        cs.submit(new DbWriteClusterNum(threadCount1++,connection,++louvainIdx,snQ));
                         sids[snQ] = true;
                     }
                     if( !sids[snR] ) // R of pair
                     {
-                        cs.submit(new DbWriteClusterNum(threadCount1++,connection,++louvainIdx,id));
+                        cs.submit(new DbWriteClusterNum(threadCount1++,connection,++louvainIdx,snR));
                         sids[snR] = true;
                     }
-                }
+//                }
             }
         }
             
@@ -984,14 +1168,15 @@ public class CorpusProcessDb
      * Generate sentence clusters.
      * 
      * @param conn
+     * @param numSents
      * @return
      * @throws NumberOfNodesException
      * @throws java.sql.SQLException
+     * @throws eu.discoveri.louvaincluster.NoClustersException
      */
-    public Clustering clustersGen(Connection conn)
-            throws NumberOfNodesException, SQLException
+    public Clustering clustersGen(Connection conn, int numSents)
+            throws NumberOfNodesException, SQLException, NoClustersException
     {
-        int lQ = 0, lR = 0;
         int clc = 0;
         int eIdx = -1;
 
@@ -1006,30 +1191,21 @@ public class CorpusProcessDb
         double[] edgeWeights = new double[clc];
         int[][] edges = new int[2][clc];
         
-        // Sentence
-        PreparedStatement sent = conn.prepareStatement("select louvainIdx from Sentence where id = ?");
         // Similar "edges" between sentences (nodes) *****---> MAY exceed Integer.MAX ---> May need to change source code cwts.networkanalysis
-        ResultSet scrs = st.executeQuery("select score,sIdQ,sIdR from QRscoreCW where score>0.0");
+        ResultSet scrs = st.executeQuery("select score,sIdQ,sIdR from QRscoreCW");
         
         while( scrs.next() )
         {
             int sIdQ = scrs.getInt("sIdQ"); int sIdR = scrs.getInt("sIdR");
             double score = scrs.getDouble("score");
             
-            sent.setInt(1, sIdQ);
-            ResultSet s = sent.executeQuery();
-            while( s.next() ) { lQ = s.getInt("louvainIdx"); }
-            sent.setInt(1, sIdR);
-            s = sent.executeQuery();
-            while( s.next() ) { lR = s.getInt("louvainIdx"); }
-            
             edgeWeights[++eIdx] = score;
-            edges[0][eIdx] = lQ;
-            edges[1][eIdx] = lR;
+            edges[0][eIdx] = sIdQ-1;
+            edges[1][eIdx] = sIdR-1;
         }
         
         // Leiden is supposedly more accurate than Louvain
-        return Clusters.generateLeiden( (int)clc, edges, edgeWeights );
+        return Clusters.generateLeiden( numSents, edges, edgeWeights );
     }
     
     /**
@@ -1046,14 +1222,15 @@ public class CorpusProcessDb
         //        System.out.println(Arrays.deepToString(npc));
         
         // Set clusters against sentences
-        PreparedStatement ups = conn.prepareStatement("update Sentence set clusterNum = ? where louvainIdx = ?");
+        PreparedStatement ups = conn.prepareStatement("update Sentence set clusterNum = ? where id = ?");
         for( int[] npc1: npc )
         {
             if( npc1.length > 1 )
             {
-                for( int jj = 0; jj < npc1.length; jj++)
+                for( int jj = 0; jj < npc1.length; jj++ )
                 {
-                    ups.setInt(2, npc1[jj]);
+                    // Offset from Leiden cluster num to Sentence id (+1)
+                    ups.setInt(2, npc1[jj]+1);
                     ups.setInt(1,clusterNum);
                     ups.execute();
                 }

@@ -17,6 +17,7 @@ import eu.discoveri.predikt3.exceptions.TokensListIsEmptyException;
 import eu.discoveri.predikt3.config.Constants;
 import eu.discoveri.predikt3.exceptions.SentenceNotPersistedException;
 import eu.discoveri.predikt3.sentences.Token;
+import eu.discoveri.predikt3.sentences.MultiToken;
 import eu.discoveri.predikt3.lemmatizer.Lemmatizer;
 import eu.discoveri.predikt3.sentences.LangCode;
 import eu.discoveri.predikt3.utils.CharacterUtils;
@@ -35,7 +36,6 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -57,19 +57,20 @@ import opennlp.tools.tokenize.TokenizerME;
 public class SentenceNode extends AbstractVertex implements Comparator<SentenceNode>, Comparable<SentenceNode>
 {
     // Basic attrs
-    private String                      origText = "";
-    private String                      sentence = "";
+    private String              origText = "";
+    private String              sentence = "";
     // Scoring for this node
-    private double                      score = 0.d, prevScore = 0.d;
-    private List<Token>                 tokens;
+    private double              score = 0.d,
+                                prevScore = 0.d;
+    private List<Token>         tokens;
     
     // Language/Locale
-    private LangCode                    langCode;
-    private Locale                      locale;
+    private LangCode            langCode;
+    private Locale              locale;
 
     // Clusters
-    private DocumentCategory            docCategory;
-    private final SentenceClusterNum    clusterNum = new SentenceClusterNum();
+    private DocumentCategory    docCategory;
+    private SentenceClusterNum  clusterNum = new SentenceClusterNum(-1);
 
 
     /**
@@ -159,7 +160,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode(String name, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
     {
-        this(name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(), initScore);
+        this(name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(-1), initScore);
     }
     
     /**
@@ -176,7 +177,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode(int nid, String name, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(), initScore);
+        this(nid, name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(-1), initScore);
     }
     
     /**
@@ -281,7 +282,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, LangCode langCode, Locale locale)
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
+        this(nid, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
     }
 
     /**
@@ -298,7 +299,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     }
     
     /**
-     * Constructor (generally for persisted Sentence) and expected to have tokens.
+     * Constructor (generally from persisted Sentence) and expected to have tokens.
      * With default namespace, initial score and  and language LangCode.en.
      *
      * @param nid 
@@ -308,7 +309,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, List<Token> tokens )
     {
-        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(), Constants.NODESCOREDEF);
+        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(-1), Constants.NODESCOREDEF);
     }
     
     /**
@@ -320,7 +321,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( String name, String origText )
     {
-        this(name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
+        this(name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
     }
     
     /**
@@ -333,7 +334,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText )
     {
-        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
+        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
     }
 
     
@@ -375,6 +376,10 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     
     public LangCode getLangCode(){ return langCode; }
     public Locale getLocale() { return locale; }
+    
+    public SentenceClusterNum getSentenceClusterNum() { return clusterNum; }
+    public void setSentenceClusterNum( SentenceClusterNum clusterNum ) { this.clusterNum = clusterNum; }
+    
 
     /**
      * Persist this sentence (no tokens).  Uses auto-commit.
@@ -395,7 +400,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         sent.setString(3, locale.toString());
         sent.setDouble(4, score);
         sent.setDouble(5, prevScore);
-        sent.setInt(6, 0);
+        sent.setLong(6, this.getDocumentCategory().getCategoryNum());
         sent.execute();
 
         //The id
@@ -425,7 +430,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             sent.setString(3, sn.getLocale().toString());
             sent.setDouble(4, sn.getScore());
             sent.setDouble(5, sn.getPrevScore());
-            sent.setInt(6,0);
+            sent.setLong(6,sn.getDocumentCategory().getCategoryNum());
             sent.execute();
         }
     }
@@ -540,15 +545,19 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      * @param in
      * @return 
      */
-    public String clean( String in )
+    public MultiToken clean( String in )
     {
         String s = "";
+        int tokCount = 1;
         
         // Ditch punctuation, leave just characters and whitespace and apostrophes
         for( Character c: in.toCharArray() )
         {
             if(c.equals('-'))
+            {
                 s += " ";
+                ++tokCount;
+            }
             else
                 if(c.equals('\'') || c.equals('\u2019'))
                     s += "'";
@@ -557,7 +566,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                     s += c;
         }
         
-        return s;
+        return new MultiToken(s,tokCount);
     }
     
     /**
@@ -570,19 +579,25 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     public String cleanSentence()
     {
         // Ditch punctuation etc.
-        sentence = clean(sentence);
+        sentence = clean(sentence).getS();
 
         return sentence;
     }
     
     /**
-     * Clean (input) tokens (normally for sentence not tokenised via method).
-     * Ditch any nulls and also remove "'s" from tokens.  ("is" is a stop word
-     * anyway and possession can be ignored).
+     * Clean (input) tokens (normally for sentence not tokenised via method). Ditch
+     * any nulls and also remove "'s" from tokens.("is" is a stop word anyway and
+     * possession can be ignored).
+     * 
+     * @param pme
      * @return 
+     * @throws eu.discoveri.predikt3.exceptions.TokensListIsEmptyException 
      */
-    public List<Token> cleanTokens()
+    public List<Token> cleanTokens(POSTaggerME pme)
+            throws TokensListIsEmptyException
     {
+        List<Token> newToks = new ArrayList<>();
+        
         for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tokn = t.next();
@@ -592,14 +607,31 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                 t.remove();
             else
             {
-                tok = clean(tok.toLowerCase(locale));
-
-                // @TODO: Check for German (wie geht's)
-                if( tok.contains("'s") )
-                    tok = tok.replaceAll("'s", "");
-                tokn.setToken(tok);
+                MultiToken mtok = clean(tok.toLowerCase(locale));
+                String stok = mtok.getS();
+                // @TODO: Check for German (wie geht's) ********************************[l.unApostrophe?]*****************************************************
+                if( stok.contains("'s") )
+                    stok = stok.replaceAll("'s", "");
+                
+                // Do we need to add to Token list? ('-' became space)
+                if( mtok.getTokCount() > 1 )
+                {
+                    t.remove();
+                    List<String> ls = Arrays.asList(stok.split("\\s*[ ]\\s*"));
+                    for( String tk: ls )
+                        { System.out.print(" [" +tk+ "]"); newToks.add(new Token(tk,"")); }
+            System.out.println("\r\n.....> " +newToks.size());  // ***************************************
+                    // POS tag these 'new' tokens
+                    posTagTokenList(pme,newToks);
+                }
+                else
+                    tokn.setToken(stok);
             }
         }
+        
+        // Append any new tokens
+        if( !newToks.isEmpty() )
+            tokens.addAll(newToks);
         
         return this.tokens;
     }
@@ -615,6 +647,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tok = t.next();
+            // Hokey way of dealing with numbers
             try
             {
                 Number n = nf.parse(tok.getToken());
@@ -653,7 +686,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
 //    }
     
     /**
-     * Keep tokens that match the input list, remove otherwise.
+     * Keep tokens that match the POS input list, remove otherwise.
      * @param keepToks
      * @return 
      */
@@ -675,7 +708,8 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                 }
             }
             
-            if(!matched) t.remove();
+            if( !matched )
+                t.remove();
         }
         
         return this.tokens;
@@ -788,7 +822,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                     tok.append((char)ch);
             }
         }
-        
+
         return this.tokens;
     }
     
@@ -821,6 +855,33 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         
         // Convert to List
         return Arrays.asList(ptags);
+    }
+    
+    /**
+     * POS tag a list of tokens.
+     * 
+     * @param pme
+     * @param inToks
+     * @return
+     * @throws TokensListIsEmptyException 
+     */
+    public List<Token> posTagTokenList( POSTaggerME pme, List<Token> inToks )
+            throws TokensListIsEmptyException
+    {
+        // No tokens?
+        if( inToks.isEmpty() )
+            throw new TokensListIsEmptyException("No tokens, SentenceNode:postagTokenList(), sentence id: " +this.getNid()+ ", document id: " +this.getDocumentCategory().getCategoryNum());
+        
+        // Get list of POStags
+        Token[] toks = inToks.toArray(new Token[0]);
+        String[] ptags = pme.tag(inToks.stream().map(t -> t.getToken()).toArray(String[]::new));
+        
+        // Map simplified tag into Token class
+        for( int ii=0; ii<ptags.length; ii++ )
+            toks[ii].setPos(POSsimple(ptags[ii]));
+        
+        // Convert to List
+        return Arrays.asList(toks);
     }
 
     
@@ -1045,7 +1106,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     {
         // What to get
         PreparedStatement sent = conn.prepareStatement("select Sentence.id as nid, sentence from Sentence limit ?,?");
-        PreparedStatement tkn = conn.prepareStatement("select token from Token where sn = ?");
+        PreparedStatement tkn = conn.prepareStatement("select token,lemma from Token where sn = ?");
         
         // Get a page of SentenceNodes (Qs), create list of Sentence objects
         List<SentenceNode> lsSN = new ArrayList<>();
@@ -1059,7 +1120,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                 tkn.setInt(1,ress.getInt("nid"));
                 ResultSet restk = tkn.executeQuery();
                 while( restk.next() )
-                    { ltkn.add(new Token(restk.getString("token"),restk.getString("token"))); }
+                    { ltkn.add(new Token(restk.getString("token"),restk.getString("lemma"))); }
                 lsSN.add(new SentenceNode(ress.getInt("nid"),"",ress.getString("sentence"),ltkn));
             }
         } catch (SQLException ex) {
@@ -1069,42 +1130,6 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         return lsSN;
     }
 
-    /**
-     * Get sentence (with its tokens/lemmas) by id, limit LIMIT. Note, paging by
-     * limit ?,? is slow for large number.
-     * 
-     * @param conn
-     * @param offset
-     * @param pageSize
-     * @return
-     * @throws SQLException 
-     */
-    public static List<SentenceNode> sentenceById( Connection conn, int offset, int pageSize )
-            throws SQLException
-    {
-        long idBegin=-1, idEnd=-1;
-        
-        Statement st = conn.createStatement();
-        
-        // Start/End ids
-//        ResultSet idSt = st.executeQuery("select min(id) idBegin from Sentence");
-//        while( idSt.next() ) { idBegin = idSt.getInt("idBegin"); }
-//        ResultSet idEn = st.executeQuery("select max(id) idEnd from Sentence");
-//        while( idEn.next() ) { idEnd = idEn.getInt("idEnd"); }
-
-        PreparedStatement sents = conn.prepareStatement("select id, sentence, langCode, locale, token, lemma, pos from Sentence,Token where sn=Sentence.id and sn=? order by Sentence.id limit ?");
-        sents.setInt(1,offset);
-        sents.setInt(2,pageSize);
-        ResultSet res = sents.executeQuery();
-        while( res.next() )
-        {
-            // Products are why RdBs are annoying...
-            List<SentenceNode> lsn = new ArrayList<>();
-            List<Token> lt = new ArrayList<>();
-            
-            lsn.add(new SentenceNode());
-        }
-    }
     
     /**
      * Dump out tokens.

@@ -24,9 +24,9 @@ public class SentenceClusterNum extends GraphEntity
         this.clusterNum = clusterNum;
     }
     
-    public SentenceClusterNum()
+    public SentenceClusterNum(int clusterNum)
     {
-        this(-1,"","");
+        this(clusterNum,"","eu.discoveri");
     }
 
     public int getClusterNum() { return clusterNum; }

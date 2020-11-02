@@ -65,7 +65,7 @@ public class DbWriteScores implements Callable
             if( rs.next() )
                 qrscwId = rs.getInt(1);
             
-            // Now for the list of scores across all matched words of the two sentences
+            // Now for the list of scores across all matched words of the two sentcountences
             PreparedStatement ps2 = conn.prepareStatement("insert into CWcount values(default,?,?,?,?)");
             for( CWcount cw: qrscw.getCwCount() )
             {
@@ -77,11 +77,13 @@ public class DbWriteScores implements Callable
             }
 
             conn.commit();
+            ps1.close();
+            ps2.close();
             conn.close();
         }
         catch( SQLException sex )
         {
-            System.out.println("FAILED " +sex.getMessage());
+            System.out.println("FAILED! DbWriteScores: " +sex.getSQLState()+"/"+sex.getLocalizedMessage());
             try
             {
                 if( conn != null && !conn.isClosed() )
@@ -89,8 +91,7 @@ public class DbWriteScores implements Callable
             }
             catch( SQLException sex2 )
             {
-                System.out.println("FAILED, Connection closed, " +sex2.getSQLState());
-                sex2.printStackTrace();
+                System.out.println("FAILED! DbWriteScores: Connection closed, " +sex2.getSQLState()+"/"+sex2.getLocalizedMessage());
             }
             finally
             {

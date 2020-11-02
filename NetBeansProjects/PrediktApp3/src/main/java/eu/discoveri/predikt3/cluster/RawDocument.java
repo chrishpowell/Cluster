@@ -40,7 +40,7 @@ public class RawDocument
      */
     public RawDocument(URI source, String text)
     {
-        this(new DocumentCategory(),source,text);
+        this(new DocumentCategory(-1),source,text);
     }
     
     /**

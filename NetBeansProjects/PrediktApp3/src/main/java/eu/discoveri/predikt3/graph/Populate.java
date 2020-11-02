@@ -85,9 +85,10 @@ public class Populate
     }
 
     /**
-     * Extract list of sentences from doc.  Get Sentence probability at same time.
+     * Extract list of sentences from doc.
      * 
      * @param doc
+     * @param dcat
      * @return 
      */
     public List<SentenceNode> extractSentences( String doc, DocumentCategory dcat )
@@ -98,6 +99,10 @@ public class Populate
         // Extract sentences (creating a unique name)
         for( String sent: sdme.sentDetect(doc) )
         {
+            // Probably a nonsense sentence
+            if( sent.length() > Constants.MAXSENTLEN )
+                continue;
+            
             // Create a roughly unique name
             String uname = "S"+dcat.getCategoryNum()+":"+(dIdx++)+"T"+System.currentTimeMillis();
             

@@ -60,11 +60,12 @@ public class DbWriteSimilarity implements Callable
             up.execute();
 
             conn.commit();
+            up.close();
             conn.close();
         }
         catch( SQLException sex )
         {
-            System.out.println("FAILED " +sex.getMessage());
+            System.out.println("FAILED! DbWriteSimilarity: " +sex.getSQLState()+"/"+sex.getLocalizedMessage());
             try
             {
                 if( conn != null && !conn.isClosed() )
@@ -72,8 +73,7 @@ public class DbWriteSimilarity implements Callable
             }
             catch( SQLException sex2 )
             {
-                System.out.println("FAILED, Connection closed, " +sex2.getSQLState());
-                sex2.printStackTrace();
+                System.out.println("FAILED! DbWriteSimilarity: Connection closed, " +sex2.getSQLState()+"/"+sex2.getLocalizedMessage());
             }
             finally
             {
