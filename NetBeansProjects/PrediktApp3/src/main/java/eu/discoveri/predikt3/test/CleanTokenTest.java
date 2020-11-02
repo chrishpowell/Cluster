@@ -16,7 +16,8 @@ import java.util.List;
  */
 public class CleanTokenTest
 {
-    static String stok = "18. 12/12 SLIDES SHARE SHARE TWEET SHARE EMAIL 1/12 SLIDES Next Slide AdChoices 1 2 3 4 YOU MAY LIKE Ad Microsoft Savvy Americans do this to earn an extra $1,394 per month in retirement The Motley Fool New Car Gadget Magically Removes Scratches & Dents NanoMagic 23 Gadgets That Could Sell Out Before the Holidays Gadgets Post More from Astrofame The Reason Why Each Zodiac Sign Is Difficult To Love Your Weekly Horoscope: August 24 - 30 Who Is Your Zodiac Sign Sexually Incompatible With? ...";
+    static String stok1 = "18. 12/12 SLIDES SHARE SHARE TWEET SHARE EMAIL 1/12 SLIDES Next Slide AdChoices 1 2 3 4 YOU MAY LIKE Ad Microsoft Savvy Americans do this to earn an extra $1,394 per month in retirement The Motley Fool New Car Gadget Magically Removes Scratches & Dents NanoMagic 23 Gadgets That Could Sell Out Before the Holidays Gadgets Post More from Astrofame The Reason Why Each Zodiac Sign Is Difficult To Love Your Weekly Horoscope: August 24 - 30 Who Is Your Zodiac Sign Sexually Incompatible With? ...";
+    static String stok =  " ";
     public static void main(String[] args)
     {
         List<Token> newToks = new ArrayList<>();
@@ -27,7 +28,7 @@ public class CleanTokenTest
 //            System.out.print(" [" +tk+ "]");
             newToks.add(new Token(tk,"")); 
         }
-        
+
         System.out.println("\r\n....> " +newToks.size());
     }
 }

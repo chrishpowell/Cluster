@@ -553,7 +553,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         // Ditch punctuation, leave just characters and whitespace and apostrophes
         for( Character c: in.toCharArray() )
         {
-            if(c.equals('-'))
+            if(c.equals('-') || Character.getType(c) == Character.DASH_PUNCTUATION )
             {
                 s += " ";
                 ++tokCount;
@@ -564,6 +564,12 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             else
                 if(Character.isLetterOrDigit(c) || Character.isWhitespace(c))
                     s += c;
+            // Section below  disappears (ie token not added)
+//            else
+//            {
+//                s += "?";
+//                System.out.println("...> DODGY CHAR: " +c+ ", num. val: " +Character.getNumericValue(c)+ ", type: " +Character.getType(c));
+//            }
         }
         
         return new MultiToken(s,tokCount);
@@ -597,13 +603,14 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             throws TokensListIsEmptyException
     {
         List<Token> newToks = new ArrayList<>();
-        
+
         for( Iterator<Token> t = this.tokens.iterator(); t.hasNext(); )
         {
             Token tokn = t.next();
             String tok = tokn.getToken();
-            
-            if( tok == null || tok.isEmpty() )
+
+            // Not interested in null, empty or single space
+            if( tok == null || tok.isEmpty() || tok.equals(" ") )
                 t.remove();
             else
             {
@@ -618,11 +625,13 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                 {
                     t.remove();
                     List<String> ls = Arrays.asList(stok.split("\\s*[ ]\\s*"));
-                    for( String tk: ls )
-                        { System.out.print(" [" +tk+ "]"); newToks.add(new Token(tk,"")); }
-            System.out.println("\r\n.....> " +newToks.size());  // ***************************************
-                    // POS tag these 'new' tokens
-                    posTagTokenList(pme,newToks);
+                    ls.forEach(tk -> {
+                        newToks.add(new Token(tk,""));
+                    });
+            
+                    // POS tag these 'new' tokens (if any)
+                    if( !newToks.isEmpty() )
+                        posTagTokenList(pme,newToks);
                 }
                 else
                     tokn.setToken(stok);
