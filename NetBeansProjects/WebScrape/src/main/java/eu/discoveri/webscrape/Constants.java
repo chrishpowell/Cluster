@@ -4,6 +4,9 @@
 
 package eu.discoveri.webscrape;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  *
  * @author Chris Powell, Discoveri OU
@@ -17,4 +20,9 @@ public class Constants
     
     // Num. clusters to process
     public static int       TOPNUMCLUSTERS = 5;
+    
+    // Include/exclude site lists
+    public static final List<String>  ASTROINCL = Arrays.asList("astrology","horoscope","prediction","aries","taurus","gemini","cancer","leo","virgo","libra","scorpio","sagittarius","aquarius","pisces","capricorn","zodiac");
+    public static final List<String>  ASTROEXCL = Arrays.asList("tarot","shop","game","divination","psychic","crystal","numerology","email","contact","subscribe","subscription","about","fashion","beauty","culture","feedback","sitemap");
+    public static final List<String>  NOTPAGE = Arrays.asList(".jpg",".jpeg",".png",".mov",".tiff",".svg",".pdf",".doc",".docx",".gif",".raw",".bmp",".ps",".psd",".webp",".tga",".dds","exr",".j2k",".pnm",".xwd",".mp4",".ai");
 }

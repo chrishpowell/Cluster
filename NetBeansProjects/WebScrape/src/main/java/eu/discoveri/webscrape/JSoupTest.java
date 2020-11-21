@@ -11,6 +11,8 @@ package eu.discoveri.webscrape;
 create table Document
 (
 id INT unsigned NOT NULL AUTO_INCREMENT,
+cId INT unsigned,
+cTags VARCHAR(255),
 langcode CHAR(2) DEFAULT "en",
 title VARCHAR(255) NOT NULL,
 url VARCHAR(255) NOT NULL,
@@ -36,8 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.jsoup.HttpStatusException;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
@@ -65,6 +67,7 @@ public class JSoupTest
     public static Connection docDb()
             throws Exception
     {
+        // *** Change to Hikari!
         String URL = "jdbc:mysql://localhost:3306/documents?useSSL=false&serverTimezone=CET";
         String USER = "chrispowell";
         String PWD = "karabiner";
@@ -84,7 +87,7 @@ public class JSoupTest
         // Empty the table
         PreparedStatement empty = conn.prepareStatement("SET FOREIGN_KEY_CHECKS = 0");
         empty.executeUpdate();
-        empty = conn.prepareStatement("truncate documents.Document");
+        empty = conn.prepareStatement("truncate documents.Document");   // Plus others!
         empty.executeUpdate();
         empty = conn.prepareStatement("SET FOREIGN_KEY_CHECKS = 1");
         empty.executeUpdate();
@@ -100,12 +103,13 @@ public class JSoupTest
             throws Exception
     {
         // Populate the table
-        PreparedStatement ps = conn.prepareStatement("insert into documents.Document values(default,?,?,?)");
+        PreparedStatement ps = conn.prepareStatement("insert into documents.Document values(default,?,?,?,?)");
         for( Map.Entry<URL,Content> url: linkURLs.entrySet() )
         {
-            ps.setString(1, url.getValue().getTitle());
-            ps.setString(2, url.getKey().toString());
-            ps.setString(3, url.getValue().getContent());
+            ps.setString(1, url.getValue().getLangCode());
+            ps.setString(2, url.getValue().getTitle());
+            ps.setString(3, url.getKey().toString());
+            ps.setString(4, url.getValue().getContent());
             ps.executeUpdate();
         }
     }
@@ -212,7 +216,7 @@ public class JSoupTest
                     doc = Jsoup.connect(site.toString()).get();
                     if( p.matcher(site.toString()).matches() )
                     {
-                        linkURLs.put( site, new Content(doc.title(),
+                        linkURLs.put( site, new Content("en",doc.title(),
                                       Jsoup.clean(doc.body().text(),Whitelist.none()).replaceAll("&amp;", "&")) );
                     }
                 }
@@ -245,7 +249,7 @@ public class JSoupTest
                                 {
                                     // Get the link
                                     doc = Jsoup.connect(link).get();
-                                    linkURLs.put( lURL, new Content(doc.title(),
+                                    linkURLs.put( lURL, new Content("en",doc.title(),
                                                   Jsoup.clean(doc.body().text(),Whitelist.none()).replaceAll("&amp;", "&")) );
                                 }
                             }
@@ -259,7 +263,7 @@ public class JSoupTest
             }
             
             System.out.println("\r\nDocuments, clean and store...");
-            jst.emptyDocuments(conn);
+            jst.emptyDocuments(conn);   // ???
             jst.tableDocuments(conn, linkURLs);
         }
         
@@ -269,24 +273,4 @@ public class JSoupTest
         });
         System.out.println("==============================================");
     }
-}
-
-/**
- * For db.
- * @author Chris Powell, Discoveri OU
- */
-class Content
-{
-    private final String    title;
-    private final String    content;
-    
-    public Content( String title, String content )
-    {
-        this. title = title;
-        this.content = content;
-    }
-
-    public String getTitle() { return title; }
-
-    public String getContent() { return content; }
 }
