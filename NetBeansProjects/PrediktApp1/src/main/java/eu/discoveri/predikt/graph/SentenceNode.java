@@ -29,13 +29,10 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -121,6 +118,17 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     }
     
     /**
+     * Sentence with tokens.
+     * @param name
+     * @param origText
+     * @param tokens 
+     */
+    public SentenceNode(String name, String origText, List<Token> tokens)
+    {
+        this(name,Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(), Constants.NODESCOREDEF);
+    }
+    
+    /**
      * Constructor. With default namespace and language LangCode.en.
      * 
      * @param name
@@ -198,6 +206,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     }
 
 
+
     public String getSentence() { return sentence; }
     public void updateSentence( String s ) { sentence = s; }
     public String getOrigText() { return origText; }
@@ -206,6 +215,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
 
     public double getScore() { return score; }
     public void setScore(double score) { this.score = score; }
+    public double getPrevScore() { return prevScore; }
 
     public List<SentenceNode> getPreds() { return preds; }
     public void setPreds(List<SentenceNode> preds) { this.preds = preds; }
@@ -218,8 +228,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
 
     
     /**
-     * Clean string of punctuation, keeping apostrophes.  Note@ Tokenizing the
-     * sentence renders this moot.
+     * Clean string of punctuation, keeping apostrophes. 
      * 
      * @param in
      * @return 
@@ -232,7 +241,9 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         for( Character c: in.toCharArray() )
         {
             if(c.equals('-'))
+            {
                 s += " ";
+            }
             else
                 if(c.equals('\'') || c.equals('\u2019'))
                     s += "'";
@@ -885,6 +896,16 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      * @return 
      */
     @Override
+//    public boolean equals(Object obj)
+//    {
+//        final SentenceNode other = (SentenceNode) obj;
+//        
+//        if(this == other) { return true; }
+//        if(other == null) { return false; }
+//        if( getClass() != other.getClass() ) { return false; }
+//        
+//        return this.getSUUID().equals(other.getSUUID());
+//    }
     public boolean equals(Object obj)
     {
         final SentenceNode other = (SentenceNode) obj;
@@ -893,7 +914,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         if(other == null) { return false; }
         if( getClass() != other.getClass() ) { return false; }
         
-        return this.getSUUID().equals(other.getSUUID());
+        return this.getNid().equals(other.getNid());
     }
     
     /**
