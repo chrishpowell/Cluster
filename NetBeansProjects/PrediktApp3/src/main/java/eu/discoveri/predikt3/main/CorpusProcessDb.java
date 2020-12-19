@@ -34,8 +34,9 @@ import eu.discoveri.predikt3.sentences.Token;
 import eu.discoveri.predikt3.graph.DbWriteClusterNum;
 import eu.discoveri.louvaincluster.Clusters;
 import eu.discoveri.louvaincluster.NoClustersException;
-import eu.discoveri.predikt3.cluster.SentenceClusterNum;
+import eu.discoveri.predikt3.graph.DbSentenceDelete;
 import eu.discoveri.predikt3.graph.DbWriteSentenceTokens;
+import eu.discoveri.predikt3.utils.Utils;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -43,10 +44,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
+import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -115,6 +119,7 @@ public class CorpusProcessDb
     
     /**
      * Process sentences by page (LIMIT/OFFSET) [slow].
+     * 
      * @param conn
      * @param pme
      * @throws EmptySentenceListException
@@ -182,22 +187,35 @@ public class CorpusProcessDb
         System.out.print("     ...Pages: ");
         
         // Form statement
-        PreparedStatement ps = ps4SentenceById(conn,pageSiz);
+        PreparedStatement ss = SentenceNode.ps4SentenceById(conn,pageSiz);
+        PreparedStatement ts = SentenceNode.ps4TokenLemma(conn);
         
         // Get pages of Sentences
         for( int ii=1; ii<=sentCount; ii+=pageSiz )
         {
-            // List of sentences (page: pageSiz)
-            List<SentenceNode> lsn = sentenceById(ps,pageSiz,ii);
+            // Get a bunch of sentences (page: pageSiz)
+            List<SentenceNode> lsn = SentenceNode.sentenceById(ss,ts,pageSiz,ii);
             
             System.out.print(" ("+ii+")");
             
-            // Process this set of sentences
+            // Process this set of sentences: Tokenize, clean, lemmatize
             processSentenceList(conn,pme,lsn);
             
             // Persist and set the Sentence (node/MySQL) id
             for( SentenceNode sn: lsn )
-                { cs.submit(new DbWriteSentenceTokens(threadCount1++,connection,sn.getTokens(),sn.getNid())); }
+            {
+                // Enough tokens for similarity test?
+                if( sn.getTokens().size() < Constants.MINPAIRCOUNT )
+                {
+                    // Too few Tokens for processing the sentence
+                    cs.submit(new DbSentenceDelete(threadCount1++,connection,sn.getNid()));
+                }
+                else
+                {
+                    // A good sentence it seems
+                    cs.submit(new DbWriteSentenceTokens(threadCount1++,connection,sn.getTokens(),sn.getNid()));
+                }
+            }
         }
         
         // For each completion thread
@@ -210,58 +228,7 @@ public class CorpusProcessDb
     }
     
     /**
-     * Create PreparedStatement for getting sentences by Id.
-     * 
-     * @param conn
-     * @param pageSiz
-     * @return
-     * @throws SQLException 
-     */
-    public PreparedStatement ps4SentenceById(Connection conn,int pageSiz)
-            throws SQLException
-    {
-        String sql = "select id,sentence,clusterNum from Sentence where id in (";
-        for( int ii=1; ii<=pageSiz-1; ii++ )
-            sql += "?,";
-        sql += "?) order by id";
-        
-        return conn.prepareStatement(sql);
-    }
-    
-    /**
-     * Get Sentence(s) by Id. PreparedStatement can be built using ps4SentenceById().
-     * Eg:<samp>
-        for( int offs=1; offs<=sentCount; offs+=PAGESIZ )
-            { List<SentenceNode> lsn = sentenceById(ps,PAGESIZ,offs); }</samp>
-     * @param ps PreparedStatement to get Sentence(s).
-     * @param pageSiz Size of pagination.
-     * @param offset Offset to next page
-     * @return
-     * @throws SQLException 
-     */
-    public List<SentenceNode> sentenceById( PreparedStatement ps, int pageSiz, long offset )
-            throws SQLException
-    {
-        List<SentenceNode> lsSN = new ArrayList<>();
-        for( long id=offset; id<=offset+pageSiz-1; id+=pageSiz )
-        {
-            for( int ii=1; ii<=pageSiz; ii++ )
-                ps.setLong(ii, id+ii-1);
-
-            ResultSet res = ps.executeQuery();
-            while( res.next() )
-            {
-                SentenceNode sn = new SentenceNode(res.getInt("id"),"",res.getString("sentence"));
-                sn.setSentenceClusterNum(new SentenceClusterNum(res.getInt("clusterNum")));
-                lsSN.add(sn);
-            }
-        }
-        
-        return lsSN;
-    }
-    
-    /**
-     * Tokenize list of sentences.
+     * Tokenize a list of sentences, clean the tokens, lemmatize.
      * 
      * @param conn
      * @param pme 
@@ -282,45 +249,6 @@ public class CorpusProcessDb
 
         lemmatizeSentenceCorpusViaRdb(conn, lsn);
     }
-    
-    /**
-     * Process sentences by Id.
-     * @param conn
-     * @param pme
-     * @throws EmptySentenceListException
-     * @throws SentenceIsEmptyException
-     * @throws TokensListIsEmptyException
-     * @throws IOException
-     * @throws SQLException 
-     */
-//    public void processSentencesById( Connection conn, POSTaggerME pme )
-//            throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, IOException, SQLException
-//    {
-//        long idBegin=-1, idEnd=-1;
-//        
-//        Statement st = conn.createStatement();
-//        
-//        // Start/End ids
-//        ResultSet idSt = st.executeQuery("select min(id) idBegin from Sentence");
-//        while( idSt.next() ) { idBegin = idSt.getInt("idBegin"); }
-//        ResultSet idEn = st.executeQuery("select max(id) idEnd from Sentence");
-//        while( idEn.next() ) { idEnd = idEn.getInt("idEnd"); }
-//
-//        PreparedStatement sents = conn.prepareStatement("select id, sentence, langCode, locale, token, lemma, pos from Sentence,Token where sn=Sentence.id and sn=? order by Sentence.id limit ?");
-//        
-//        for( int ii=idBegin; ii<=idEnd; ii++ )
-//        sents.setInt(1,offset);
-//        sents.setInt(2,pageSize);
-//        ResultSet res = sents.executeQuery();
-//        while( res.next() )
-//        {
-//            // Products are why RdBs are annoying...
-//            List<SentenceNode> lsn = new ArrayList<>();
-//            List<Token> lt = new ArrayList<>();
-//            
-//            lsn.add(new SentenceNode());
-//        }
-//    }
     
     /**
      * Get POS for each token.
@@ -413,16 +341,23 @@ public class CorpusProcessDb
         if( sentCount == 0L )
             throw new EmptySentenceListException("Need sentences to process! CorpusProcess:rawTokenizeSentenceCorpus()");
         
+        Iterator<SentenceNode> iSents = sents.iterator();
+        
         // Tokenize and clean
-        for( SentenceNode s: sents )
+        while( iSents.hasNext() )
         {
+            SentenceNode s = iSents.next();
+            
             // 1. Remove OOB characters ('nulls' etc.), update the sentence string
             s.updateSentence( l.remOOBChars(s.getSentence()) );
-            // Tokenize
-            s.rawTokPosThisSentence(pme);
+            
+            // 2. Tokenize
+            List<Token> lt = s.rawTokPosThisSentence(pme);
+            if( lt.isEmpty() )
+                { iSents.remove(); }
         }
         
-        return sents;
+        return Utils.iteratorToIterable(iSents);
     }
     
     /**
@@ -569,161 +504,6 @@ public class CorpusProcessDb
     }
     
     /**
-     * Token matching/counting per sentence pair. Note Token class contains
-     * both token and lemma.
-     * 
-     * @param sents
-     * @return 
-     * @throws EmptySentenceListException 
-     */
-//    public Iterable<SentenceNode> countingTokens( HikariDataSource connection, int numSents )
-//            throws EmptySentenceListException, NotEnoughSentencesException, SQLException
-//    {
-//        // Anything to pair process?
-//        if( numSents < 2 )
-//            throw new NotEnoughSentencesException("Need at least two sentences to analyse pairs.");
-//        
-//        // Calc. num. pairs
-//        long numPairs = numSents*(numSents-1)/2;
-//        
-//        // Set up the futures
-//        ExecutorService execsrv = Executors.newCachedThreadPool();
-//	CompletionService<Integer> cs = new ExecutorCompletionService<>(execsrv);
-//
-//        /*
-//         * Sort sentences by tokens' count (long to short hence s2 - s1,
-//         * see SentenceNode::compare())
-//         * Allows sentence matching to work efficiently/properly
-//         * @TODO:   HMMM...  What if lemmas exceeds tokens (blank/null lemmas in Token)?
-//         *
-//         * Count common words per sentence pair (Q,R). Q is 'source' sentence,
-//         * R is 'target' sentence.
-//         * [Tot. num. sentence pairs = sents.size*(sents.size-1)/2.]
-//         */
-//        // Let's get a connection to the db
-//        Connection conn = connection.getConnection();
-//        
-//        /*
-//         * Sort sentences by tokens' count (long to short hence s2 - s1)
-//         * Allows sentence matching to work efficiently/properly
-//         */
-//        List<SentenceNode> nodeList = StreamSupport.stream(sents.spliterator(),false)
-//                                .sorted((s1,s2) -> s2.getTokens().size()-s1.getTokens().size())
-//                                .collect(Collectors.toList());
-//
-//        /*
-//         * Count common words per sentence pair (Q,R).
-//         * [Num sentence pairs = (sents.size*sents.size-1)/2.]
-//         */
-//        // ---> For each sentence (Q) 'Source' sentence
-//        for( SentenceNode nodeQ: nodeList )
-//        {
-//            // Count of common words in each sentence of pair
-//            CWcount cqr; 
-//            
-//            // 'Name of source Sentence(Node) Q
-//            String nameQ = nodeQ.getName();
-//            
-//            // Get words/tokens of sentenceQ (of NodeQ)
-//            List<Token> wordsQ = nodeQ.getTokens();
-//
-//            // ---> For each sentence (R) 'Target' sentence
-//            for( SentenceNode nodeR: nodeList )
-//            {
-//                // Name of target Sentence(Node) R
-//                String nameR = nodeR.getName();
-//
-//                /*
-//                 * Do not process sentences if...
-//                 */
-//                // ...same sentence
-//                if( nameR.equals(nameQ) ) continue;
-//                
-//                // ...pair already processed. That is, processing B:A but A:B done already
-//                if( !noDupsTok.containsKey(nameQ) )
-//                {
-//                    if( !noDupsTok.containsKey(nameR) )
-//                    {
-//                        // Start this sentence pair Q:R
-//                        Map<String,Nul> nulMap = new HashMap<>();
-//                        nulMap.put(nameR,nul); 
-//                        noDupsTok.put(nameQ,nulMap);
-//                    }
-//                    else
-//                        // Key already exists, in future process as else below
-//                        continue;
-//                }
-//                else
-//                    if( !noDupsTok.get(nameQ).containsKey(nameR) )
-//                    {
-//                        noDupsTok.get(nameQ).put(nameR, nul);
-//                    }
-//
-//                /*
-//                 * Ok, got two candidate sentences.  Do matching token counting.
-//                 */
-//                // Get words/tokens of sentenceR (of NodeR)
-//                List<Token> wordsR = nodeR.getTokens();
-//
-//                /*
-//                 * Now compare tokens of sentences Q:R
-//                 */
-//                // Map of count of common words between two sentences <Word,count of Word per sentence pair>
-//                Map<String,CWcount> wCountQR = new HashMap<>();
-//                
-//                // For each token in sentenceQ (Note: Q token count >= R token count)
-//                for( Token tQ: wordsQ )
-//                {
-//                    String wordQ = tQ.getToken();           // *MATCH* this token
-//
-//                    if( wCountQR.containsKey(wordQ) )       // Is this token common between Q&R?
-//                    { // Yes
-//                        cqr = wCountQR.get(wordQ);          // Get current count for this token
-//                        int count = cqr.getCountQ();        // Count in Q
-//                        cqr.setCountQ(++count);             // Increment
-//                        wCountQR.replace(wordQ, cqr);       // Update
-//                        
-//                        // Already counted all of R (where token key is created below), so skip R
-//                        continue;
-//                    }
-//
-//                    // Match Q token against each token in target sentenceR
-//                    for( Token tR: wordsR )
-//                    {
-//                        String wordR = tR.getToken();       // *MATCH* this token
-//                        
-//                        if( wordR.equals(wordQ) )                               // Words match between sentences?
-//                        { //Yes
-//                            // First match for token in both Q&R?
-//                            if( !wCountQR.containsKey(wordQ) )                  // Create Map entry
-//                            {//Yes
-//                                wCountQR.put(wordQ, new CWcount(wordQ,1,1));    // Init count of both sentences
-//                            }
-//                            else
-//                            {//No
-//                                // Ok, get the counts for this token
-//                                cqr = wCountQR.get(wordR);
-//                                int count = cqr.getCountR();        // Count for R sentence
-//                                cqr.setCountR(++count);             // Increment R count
-//                                wCountQR.replace(wordR, cqr);       // Update
-//                            }
-//                        }
-//                    }
-//                }
-//                
-//                // Ok, store the common words for the sentence pairs
-//                if( wCountQR.values().size() > 0 )
-//                {
-//                    // Initial score is zero.
-//                    cs.submit(new DbWriteScores(threadCount++,connection,new QRscoreCW(snQ,snR, new ArrayList<CWcount>(wCountQR.values()))));
-//                }
-//            }
-//        }
-//        
-//        return sents;
-//    }
-    
-    /**
      * Check if pair already processed.
      * @param keyQ
      * @param keyR 
@@ -819,7 +599,7 @@ public class CorpusProcessDb
 
     
     /**
-     * Lemma matching/counting per sentence pair.Note Token class contains both
+     * Lemma matching/counting per sentence pair [slow]. Note Token class contains both
      * token and lemma.
      * 
      * @param connection
@@ -833,14 +613,15 @@ public class CorpusProcessDb
     // Pagination
     static int SKIP0 = 0, SKIP1 = 0, PCNT = 0;
     static int threadCount = 0;
-    public void countLemmas( HikariDataSource connection, CompletionService<Integer> cs, int numSents )
+    public void countLemmasByPage( HikariDataSource connection, CompletionService<Integer> cs, int numSents )
             throws SQLException, InterruptedException, ExecutionException, NotEnoughSentencesException
     {
-        int LIMIT = Constants.PAGSIZE;
-        
         // Anything to pair process?
         if( numSents < 2 )
             throw new NotEnoughSentencesException("Need at least two sentences to analyse pairs.");
+        
+        // Tell what's happening
+        System.out.println("    Counting by PAGE");
         
         // Calc. num. pairs
         long numPairs = numSents*(numSents-1)/2;
@@ -867,12 +648,11 @@ public class CorpusProcessDb
         while( true )
         {
             // Get a page of SentenceNodes (Qs), create list of Sentence objects
-            List<SentenceNode> lsQ = SentenceNode.sentenceByPage(conn,SKIP0,LIMIT);//*********************** CHANGE THIS *************************
+            List<SentenceNode> lsQ = SentenceNode.sentenceByPage(conn,SKIP0,Constants.PAGSIZE);  //********* Slow, if Sentences count large
 
             /*
              * Sort sentences by tokens' count (long to short hence s2 - s1)
              * Allows sentence matching to work efficiently/properly
-             * @TODO:   HMMM...  What if lemmas exceeds tokens (blank/null lemmas in Token)?
              */
             // Default sorted() is on SentenceNode token list size.  "Supplier" to obviate Stream closing (can only "use" Stream once)
             Supplier<Stream<SentenceNode>> isnQs = () -> StreamSupport.stream(lsQ.spliterator(),false).sorted();
@@ -895,7 +675,7 @@ public class CorpusProcessDb
                         List<SentenceNode> lsR;
                         try {
                             // Get a page of SentenceNodes (Rs)
-                            lsR = SentenceNode.sentenceByPage(conn,SKIP1,LIMIT);// ****************** CHANGE TO ID ***********************
+                            lsR = SentenceNode.sentenceByPage(conn,SKIP1,Constants.PAGSIZE);// ****************** CHANGE TO ID ***********************
                             
                             // Default sorted() is on SentenceNode token list size.  Supplier, to obviate Stream closing (can only "use" Stream once)
                             Supplier<Stream<SentenceNode>> isnRs = () -> StreamSupport.stream(lsR.spliterator(),false).sorted();
@@ -926,8 +706,8 @@ public class CorpusProcessDb
                                         Map<String,CWcount> wCountQR = lemmaCompare(wordsQ,wordsR,cqr);
 //                                        dumpLemmaCountMap(wCountQR);
 
-                                        // Ok, store the common (non stop,VB,NN) words counts for the sentence pairs (if two or more words match)
-                                        if( wCountQR.values().size() > 1 )
+                                        // Ok, store the common (non stop,VB,NN) words counts for the sentence pairs
+                                        if( wCountQR.values().size() > Constants.MINPAIRCOUNT )
                                         {
                                             cs.submit(new DbWriteScores(threadCount++,connection,new QRscoreCW(snQ,snR, new ArrayList<>(wCountQR.values()))));
                                         }
@@ -936,14 +716,12 @@ public class CorpusProcessDb
                             }
                             else
                             {
-//                                SKIP1 = 0;                                      // Back to very beginning  ?????
                                 break;
                             }
                         } catch (SQLException ex) {
                             Logger.getLogger("CorpusProcessDb").log(Level.SEVERE, null, ex);
                         }
-//                        System.out.println("");
-                        SKIP1 += LIMIT;
+                        SKIP1 += Constants.PAGSIZE;
                     } // R loop
                 });
 
@@ -953,7 +731,7 @@ public class CorpusProcessDb
             else
                 break;
             
-            SKIP0 += LIMIT;
+            SKIP0 += Constants.PAGSIZE;
         }  // Q loop
         System.out.println("\r\nPCNT: " +PCNT+ ", threadCount: " +threadCount+ " waiting for completion...");
 
@@ -967,6 +745,143 @@ public class CorpusProcessDb
 //        lock.execute("UNLOCK TABLES");
     }
     
+    
+    /**
+     * Lemma matching/counting per sentence pair. Note Token class contains both
+     * token and lemma.
+     * 
+     * @param connection
+     * @param cs
+     * @param numSents
+     * @throws SQLException
+     * @throws InterruptedException
+     * @throws ExecutionException
+     * @throws NotEnoughSentencesException 
+     */
+    public void countLemmasById( HikariDataSource connection, CompletionService<Integer> cs, int numSents )
+            throws SQLException, InterruptedException, ExecutionException, NotEnoughSentencesException
+    {   
+        // Anything to pair process?
+        if( numSents < 2 )
+            throw new NotEnoughSentencesException("Need at least two sentences to analyse pairs.");
+
+        // Tell what's happening
+        System.out.println("    Counting by ID, percentage complete:");
+
+        // Calc. num. pairs
+        long numPairs = numSents*(numSents-1)/2;
+
+        /*
+         * Sort sentences by tokens' count (long to short hence s2 - s1,
+         * see SentenceNode::compare())
+         * Allows sentence matching to work efficiently/properly
+         * @TODO:   HMMM...  What if lemmas exceeds tokens (blank/null lemmas in Token)?
+         *
+         * Count common words per sentence pair (Q,R). Q is 'source' sentence,
+         * R is 'target' sentence.
+         * [Tot. num. sentence pairs = sents.size*(sents.size-1)/2.]
+         */
+        // Let's get a connection to the db
+        Connection conn = connection.getConnection();
+        // And now prepare a statement for Id call
+        PreparedStatement ss = SentenceNode.ps4SentenceById(conn,Constants.PAGSIZE);
+        PreparedStatement ts = SentenceNode.ps4TokenLemma(conn);
+        
+        // Sentence range
+        int sid = -1, lid = -1;                                                 // Start/Last sentence ids
+        Statement st = conn.createStatement();
+        ResultSet sents = st.executeQuery("select min(id) as sid, max(id) as lid from Sentence");
+        while( sents.next() )
+        {
+            sid = sents.getInt("sid");
+            lid = sents.getInt("lid");
+        }
+        
+        /*
+         * Now read the Sentence table and update scores
+         */
+        for( int ii=sid; ii<=lid; ii+=Constants.PAGSIZE )
+        {
+            // Get a page of SentenceNodes (Qs), create list of Sentence objects
+            List<SentenceNode> lsQ = SentenceNode.sentenceById(ss,ts,Constants.PAGSIZE,ii);
+
+            /*
+             * Sort sentences by tokens' count (long to short hence s2 - s1)
+             * Allows sentence matching to work efficiently/properly
+             */
+            // Default sorted() is on SentenceNode token list size.  "Supplier" to obviate Stream closing (can only "use" Stream once)
+            Supplier<Stream<SentenceNode>> isnQs = () -> StreamSupport.stream(lsQ.spliterator(),false).sorted();
+            
+            // Loop over SentenceQ set
+            if( isnQs.get().iterator().hasNext() )
+            { 
+                // Loop over each sentence
+                for( SentenceNode snQ: (Iterable<SentenceNode>)isnQs.get()::iterator )
+                {
+                    // Count of common words in each sentence pair
+                    CWcount cqr = null;
+                    
+                    // Tokens for sentence Q
+                    List<Token> wordsQ = snQ.getTokens();
+
+                    // Sentence R set
+                    for( int jj=snQ.getNid()+1; jj<=lid; jj+=Constants.PAGSIZE )
+                    {
+                        List<SentenceNode> lsR;
+                        try {
+                            // Get a page of SentenceNodes (Rs)
+                            lsR = SentenceNode.sentenceById(ss,ts,Constants.PAGSIZE,jj);
+                            
+                            // Default sorted() is on SentenceNode token list size.  Supplier, to obviate Stream closing (can only "use" Stream once)
+                            Supplier<Stream<SentenceNode>> isnRs = () -> StreamSupport.stream(lsR.spliterator(),false).sorted();
+
+                            // Loop over sentenceR set
+                            if( isnRs.get().iterator().hasNext() )
+                            {
+                                isnRs.get().forEach(snR -> {
+                                    // Tokens for sentence R
+                                    List<Token> wordsR = snR.getTokens();
+
+                                    // Map of count of common lemmas between two sentences <Word,count of Word per sentence pair>
+                                    Map<String,CWcount> wCountQR = lemmaCompare(wordsQ,wordsR,cqr);
+//                                    dumpLemmaCountMap(wCountQR);
+
+                                    // Ok, store the common (non stop,VB,NN) words counts for the sentence pairs (if two or more words match)
+                                    if( wCountQR.values().size() > 1 )
+                                    {
+                                        cs.submit(new DbWriteScores(threadCount++,connection,new QRscoreCW(snQ,snR, new ArrayList<>(wCountQR.values()))));
+                                    }
+                                    
+                                    ++PCNT;                                     // Num. pairs processed
+                                });
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        } catch (SQLException ex) {
+                            Logger.getLogger("CorpusProcessDb").log(Level.SEVERE, null, ex);
+                        }
+                    } // R loop
+                }
+
+                // How far along are we?
+                System.out.format(" %6.2f%s", (float)PCNT*100./numPairs,"%");
+            }
+            else
+                break;
+        }  // Q loop
+        
+        System.out.println("\r\nPCNT: " +PCNT+ ", threadCount: " +threadCount+ " waiting for completion...");
+
+        // For each completion thread
+        for( int ii=0; ii<threadCount; ii++ )
+        {
+            int l1 = cs.take().get();
+        }
+    }
+    
+    
     /**
      * Number of individual sentences in which lemma appears.
      * @return 
@@ -974,14 +889,27 @@ public class CorpusProcessDb
     private static Map<String,Integer> lemmaSentCount( Connection conn )
             throws SQLException
     {
-        System.out.println("Lemma sentence count:");
+        System.out.println("Lemma sentence count (being count of individual sentences in which each lemma occurs)...");
+        Instant start = Instant.now();
         Map<String,Integer> lemmaSentCount = new HashMap<>();
 
-        PreparedStatement tok = conn.prepareStatement("select lemma,count(distinct(sn)) as sc from Token,CWcount where lemma=matchWord group by matchWord");
-        ResultSet toks = tok.executeQuery();
-        while( toks.next() )
-            { lemmaSentCount.put(toks.getString("lemma"),toks.getInt("sc")); }
-        
+        // Staggeringly slow and memory hungry, hence...
+//        PreparedStatement tok = conn.prepareStatement("select lemma,count(distinct(sn)) as sc from Token,CWcount where lemma=matchWord group by matchWord");
+
+        // ...use loop in code instead
+        PreparedStatement sCount = conn.prepareStatement("select count(distinct(sn)) as sc from Token where lemma=?");
+        Statement st = conn.createStatement();
+        ResultSet lemmas = st.executeQuery("select matchWord from CWcount group by matchWord");
+        while( lemmas.next() )
+        {
+            String lemma = lemmas.getString("matchWord");
+            sCount.setString(1, lemma);
+            ResultSet toks = sCount.executeQuery();
+            while( toks.next() )
+                { lemmaSentCount.put(lemma,toks.getInt("sc")); }
+        }
+
+        System.out.println("  ..> Lemma sentence count: " +lemmaSentCount.size()+ " complete (secs): " +Duration.between(start,Instant.now()).toSeconds());
         return lemmaSentCount;
     }
     
@@ -1022,7 +950,7 @@ public class CorpusProcessDb
         while( idEn.next() ) { idEnd = idEn.getInt("idEnd"); }
         st.close();
         
-        // Update similarity scores (batch these?)
+        // Update similarity scores:
         // for each sentence pair in QRscoreCW
         // | for each common/matched word in that pair
         // | |   calc score:
@@ -1049,6 +977,7 @@ public class CorpusProcessDb
 //            {
 //                score = Constants.EDGEWEIGHTNRZERO;
 //            }
+
             cs.submit(new DbWriteSimilarity(threadCount1++,connection,score,id));
         }
         
@@ -1062,7 +991,7 @@ public class CorpusProcessDb
     }
     
     /**
-     * Scores statistics.
+     * Scores statistics.  Output used by Apache Commons Maths StatUtils.
      * 
      * @param conn
      * @return
@@ -1163,7 +1092,6 @@ public class CorpusProcessDb
         }
     }
 
-
     /**
      * Generate sentence clusters.
      * 
@@ -1238,6 +1166,7 @@ public class CorpusProcessDb
             }
         }
     }
+
     
     
 //=================================[Dump stuff]==========================================

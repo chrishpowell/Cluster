@@ -85,12 +85,19 @@ public class Constants
     public static final double      EDGEWEIGHTNRZERO = 0.000001;
 
     // Pagination
-    public static final int         PAGSIZE = 7;
+    public static final int         PAGSIZE = 25;
     public static final int         MAXSENTLEN = 511;                           // "Sentence" this long is probably nonsense
+    public static final int         MAXTOKENLEN = 63;                           // Token this long is probably nonsense
+    
+    // Min. num. tokens per sentence pair to form a 'similarity' 
+    public static final int         MINPAIRCOUNT = 2;
+    
+    // Smallest cluster
+    public static final int         SMALLESTCLUSTER = 3;
     
     // MySQL settings
-    public static final int         MAXCONNECTIONS = 200;                       // mysql>set global Max_connections=#
-    public static final int         TIMEOUTMS = 30000;                          // mS.  Be aware a timeout can mean a write failure.
+    public static final int         MAXCONNECTIONS = 250;                       // mysql>set global Max_connections=#
+    public static final int         TIMEOUTMS = 50000;                          // mS.  Be aware a timeout can mean a write failure.
     
     // Db threads, retry consts for locking clash
     public static final int         THREADLISTSIZE = 1;

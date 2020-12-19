@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 /**
@@ -81,6 +82,74 @@ public class Utils
     public static Optional<Token> findListEntry( List<Token> list, String name )
     {
         return list.stream().filter(e -> e.getToken().equals(name)).findFirst();
+    }
+    
+    /**
+     * Convert Iterator to Iterable.
+     * 
+     * @param <T>
+     * @param iterator
+     * @return 
+     */
+    public static<T> Iterable<T> iteratorToIterable(Iterator<T> iterator) {
+        return () -> iterator;
+    }
+    
+    /**
+     * Get a stack trace into a string (usually for logging) separated by CRs.
+     * 
+     * @param ste Stack trace, eg: from ex.getStackTrace(); 
+     * @return 
+     */
+    public static String StackTrace2String( StackTraceElement[] ste )
+    {
+        return Arrays.asList(ste).stream().map(s -> s.toString()).collect(Collectors.joining("\r\n"));
+    }
+    
+    /**
+     * Vector DOT product.
+     * 
+     * @param vec0
+     * @param vec1
+     * @return 
+     */
+    public static double vectorDot( double[] vec0, double[] vec1 )
+    {
+        double sum = 0;
+        for( int v = 0; v < vec0.length && v < vec1.length; v++ )
+            sum += vec0[v] * vec1[v];
+                
+        return sum;
+    }
+    
+    /**
+     * Vector norm.
+     * 
+     * @param vec
+     * @return 
+     */
+    public static double vectorNorm( double[] vec )
+    {
+        double sum = 0;
+        for (double v : vec)
+            sum += v * v;
+        
+        return Math.sqrt(sum);
+    }
+    
+    /**
+     * Cosine similarity (or cosine distance: 1-Cs(A,B)).  Exact same = 1.0, not
+     * same = -1.0.
+     * 
+     * @param vec0
+     * @param vec1
+     * @return 
+     */
+    public static double cosineSimilarity( double[] vec0, double[] vec1 )
+    {
+        assert vec0.length == vec1.length;
+        double cosim = vectorDot(vec0, vec1) / (vectorNorm(vec0) * vectorNorm(vec1));
+        return cosim;
     }
     
     

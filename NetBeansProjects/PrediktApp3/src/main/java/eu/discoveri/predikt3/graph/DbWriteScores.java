@@ -18,7 +18,8 @@ import java.util.concurrent.Callable;
 
 
 /**
- * Write scores (qrscw) in a thread.
+ * Write scores (qrscw) in a thread.  Note, uses Leiden index as Sentence ref.,
+ * not Sentence id.
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
@@ -56,8 +57,8 @@ public class DbWriteScores implements Callable
             
             // Create QRscoreCW entry and get the id
             PreparedStatement ps1 = conn.prepareStatement("insert into QRscoreCW values(default,default,?,?)",Statement.RETURN_GENERATED_KEYS);
-            ps1.setLong(1, qrscw.getNodeQ().getNid());
-            ps1.setLong(2, qrscw.getNodeR().getNid());
+            ps1.setLong(1, qrscw.getNodeQ().getLeidenIdx());
+            ps1.setLong(2, qrscw.getNodeR().getLeidenIdx());
             ps1.execute();
             //The id
             int qrscwId = 0;

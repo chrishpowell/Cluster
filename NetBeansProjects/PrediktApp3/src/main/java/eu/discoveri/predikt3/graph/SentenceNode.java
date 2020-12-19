@@ -69,6 +69,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     private Locale              locale;
 
     // Clusters
+    private int                 lIdx;
     private DocumentCategory    docCategory;
     private SentenceClusterNum  clusterNum = new SentenceClusterNum(-1);
 
@@ -124,6 +125,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      * @param initScore 
      */
     public SentenceNode(    int nid,
+                            int lIdx,
                             String name,
                             String namespace,
                             String origText,
@@ -134,6 +136,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                             double initScore   )
     {
         super(nid, name,namespace);
+        this.lIdx = lIdx;
 
         this.origText = origText;
 
@@ -160,12 +163,12 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode(String name, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
     {
-        this(name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(-1), initScore);
+        this(name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(), initScore);
     }
     
     /**
      * Constructor (generally for a persisted Sentence). Sets a default namespace.
-     * No DocumentCategory.
+     * No DocumentCategory. Ignores Leiden index.
      * 
      * @param nid Node id
      * @param name  
@@ -177,7 +180,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode(int nid, String name, String origText, LangCode langCode, Locale locale, List<Token> tokens, double initScore)
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(-1), initScore);
+        this(nid, -1, name, Constants.DEFNS, origText, langCode, locale, tokens, new DocumentCategory(), initScore);
     }
     
     /**
@@ -196,7 +199,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     
     /**
      * Constructor (generally for persisted Sentence). With default namespace and
-     * language LangCode.en.
+     * language LangCode.en. Ignores Leiden index.
      * 
      * @param nid Node id
      * @param name
@@ -206,7 +209,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode(int nid, String name, String origText, DocumentCategory docCategory, double initScore)
     {
-        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), docCategory, initScore);
+        this(nid, -1, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), docCategory, initScore);
     }
     
     /**
@@ -225,7 +228,8 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     }
     
     /**
-     * Constructor (generally for persisted Sentence). With default namespace, initial score.
+     * Constructor (generally for persisted Sentence). With default namespace,
+     * initial score. Ignores Leiden index.
      * 
      * @param nid Node id
      * @param name Name or Id
@@ -236,7 +240,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, LangCode langCode, Locale locale, DocumentCategory docCategory  )
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, Constants.NODESCOREDEF);
+        this(nid, -1, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, Constants.NODESCOREDEF);
     }
 
     /**
@@ -257,6 +261,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     
     /**
      * Constructor (generally for persisted Sentence). With default namespace.
+     * Ignores Leiden index.
      * 
      * @param nid
      * @param name Name or Id
@@ -268,11 +273,11 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, LangCode langCode, Locale locale, DocumentCategory docCategory, double initScore )
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, initScore);
+        this(nid, -1, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), docCategory, initScore);
     }
     
     /**
-     * Constructor (generally for persisted Sentence).
+     * Constructor (generally for persisted Sentence). Ignores Leiden index.
      * 
      * @param nid
      * @param name
@@ -282,7 +287,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, LangCode langCode, Locale locale)
     {
-        this(nid, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
+        this(nid, -1, name, Constants.DEFNS, origText, langCode, locale, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
     }
 
     /**
@@ -301,6 +306,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     /**
      * Constructor (generally from persisted Sentence) and expected to have tokens.
      * With default namespace, initial score and  and language LangCode.en.
+     * Ignores Leiden index.
      *
      * @param nid 
      * @param name Name or Id
@@ -309,7 +315,23 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText, List<Token> tokens )
     {
-        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(-1), Constants.NODESCOREDEF);
+        this(nid, -1, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(), Constants.NODESCOREDEF);
+    }
+    
+    /**
+     * Constructor (generally from persisted Sentence) with a Leiden index and
+     * expected to have associated tokens. With default namespace, initial score
+     * and  and language LangCode.en.
+     * 
+     * @param nid
+     * @param lIdx
+     * @param name
+     * @param origText
+     * @param tokens 
+     */
+    public SentenceNode( int nid, int lIdx, String name, String origText, List<Token> tokens )
+    {
+        this(nid, lIdx, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, tokens, new DocumentCategory(), Constants.NODESCOREDEF);
     }
     
     /**
@@ -321,12 +343,12 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( String name, String origText )
     {
-        this(name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
+        this(name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
     }
     
     /**
      * Constructor (generally for persisted Sentence). With default namespace,
-     * initial score and  and language LangCode.en.
+     * initial score and  and language LangCode.en. Ignores Leiden index.
      * 
      * @param nid Node id
      * @param name Name or Id
@@ -334,7 +356,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      */
     public SentenceNode( int nid, String name, String origText )
     {
-        this(nid, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(-1), Constants.NODESCOREDEF);
+        this(nid, -1, name, Constants.DEFNS, origText, LangCode.en, Locale.ENGLISH, new ArrayList<Token>(), new DocumentCategory(), Constants.NODESCOREDEF);
     }
 
     
@@ -360,6 +382,8 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
      * Modifiers.
      * @return 
      */
+    public int getLeidenIdx() { return lIdx; }
+
     public String getSentence() { return sentence; }
     public void updateSentence( String s ) { sentence = s; }
     public String getOrigText() { return origText; }
@@ -400,7 +424,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         sent.setString(3, locale.toString());
         sent.setDouble(4, score);
         sent.setDouble(5, prevScore);
-        sent.setLong(6, this.getDocumentCategory().getCategoryNum());
+        sent.setLong(6, this.getDocumentCategory().getSc().getCategoryNum());
         sent.execute();
 
         //The id
@@ -421,7 +445,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             throws SQLException
     {
         // Prepare.
-        PreparedStatement sent = conn.prepareStatement("insert into documents.Sentence values(default,?,?,?,?,?,?,default)");
+        PreparedStatement sent = conn.prepareStatement("insert into documents.Sentence values(default,?,?,?,?,?,?,default,default)");
         
         for( SentenceNode sn: lsn )
         {
@@ -430,7 +454,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             sent.setString(3, sn.getLocale().toString());
             sent.setDouble(4, sn.getScore());
             sent.setDouble(5, sn.getPrevScore());
-            sent.setLong(6,sn.getDocumentCategory().getCategoryNum());
+            sent.setLong(6,sn.getDocumentCategory().getSc().getCategoryNum());
             sent.execute();
         }
     }
@@ -816,15 +840,29 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
             {
                 int ch = sr.read();
                 if( ch == -1 )
-                {
-                    this.tokens.add(new Token(tok.toString()));
+                {   // End of sentence
+                    String t = tok.toString();
+                    if( t.length() > Constants.MAXTOKENLEN )                    // Stupid token=stupid sentence
+                    {
+                        this.tokens.clear();
+                        return this.tokens;
+                    }
+//                    if( t.length() < Constants.MAXTOKENLEN )
+                        this.tokens.add(new Token(t));
                     break;
                 }
                 
                 // If whitespace, new token else append to current
                 if( Character.isWhitespace(ch) )
-                {
-                    this.tokens.add(new Token(tok.toString()));
+                {   // Token delimiter
+                    String t = tok.toString();
+                    if( t.length() > Constants.MAXTOKENLEN )                    // Stupid token=stupid sentence
+                    {
+                        this.tokens.clear();
+                        return this.tokens;
+                    }
+//                    if( t.length() < Constants.MAXTOKENLEN )
+                        this.tokens.add(new Token(t));
                     tok = new StringBuilder();
                 }
                 else
@@ -850,10 +888,10 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     public List<String> posTagThisSentence( POSTaggerME pme )
             throws TokensListIsEmptyException
     {
-        // No tokens?
-        if( this.tokens.isEmpty() )
-            throw new TokensListIsEmptyException("No tokens, SentenceNode:postagThisSentence()");
-        
+//        // No tokens?
+//        if( this.tokens.isEmpty() )
+//            throw new TokensListIsEmptyException("No tokens, SentenceNode:postagThisSentence()");
+//        
         // Get list of POStags
         Token[] toks = this.tokens.toArray(new Token[0]);
         String[] ptags = pme.tag(this.tokens.stream().map(t -> t.getToken()).toArray(String[]::new));
@@ -879,7 +917,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
     {
         // No tokens?
         if( inToks.isEmpty() )
-            throw new TokensListIsEmptyException("No tokens, SentenceNode:postagTokenList(), sentence id: " +this.getNid()+ ", document id: " +this.getDocumentCategory().getCategoryNum());
+            throw new TokensListIsEmptyException("No tokens, SentenceNode:postagTokenList(), sentence id: " +this.getNid()+ ", document id: " +this.getDocumentCategory().getSc().getCategoryNum());
         
         // Get list of POStags
         Token[] toks = inToks.toArray(new Token[0]);
@@ -933,8 +971,9 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         // Generate tokens
         this.tokens = simpleTokenizeThisSentence( st );
         
-        // Add POS tags to tokens
-        posTagThisSentence( pme );
+        // Add POS tags to tokens (if any)
+        if( !this.tokens.isEmpty() )
+            posTagThisSentence( pme );
         
         return this.tokens;
     }
@@ -954,8 +993,9 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         // Generate tokens
         this.tokens = rawTokenizeThisSentence();
         
-        // Add POS tags to tokens
-        posTagThisSentence( pme );
+        // Add POS tags to tokens (if any)
+        if( !this.tokens.isEmpty() )
+            posTagThisSentence( pme );
         
         return this.tokens;
     }
@@ -1100,9 +1140,66 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
 
         return lemmas;
     }
+
     
     /**
-     * Get a page of sentences (with its tokens/lemmas).
+     * Generate Leiden index on Sentences. Note the current cluster algo (Dec2020)
+     * uses Sentence idx as array idx. As num. sents lt Sentence.max(id) (some
+     * sentences are deleted off table) whilst the cluster algo uses arrays,
+     * the cluster algo can barf with index out of range.
+     * 
+     * @param conn 
+     * @throws java.sql.SQLException 
+     */
+    public static void genLeidenIdx(Connection conn)
+            throws SQLException
+    {
+        Statement st = conn.createStatement();
+        
+        // Update the Leiden index for clustering
+        st.executeUpdate("update Sentence as s join (select id,row_number() over (order by id) as rn from Sentence) as subs on s.id=subs.id set leidenIdx=subs.rn");
+    }
+    
+    
+    /**
+     * Create PreparedStatement for getting Sentences by a set of id.  The resultant
+     * SQL is: "...where id in (?,?,...)" and the set size is determined by pageSiz.
+     * Note: PreparedStatement returns Sentence: id, sentence, clusterNum.
+     * 
+     * @param conn
+     * @param pageSiz
+     * @return
+     * @throws SQLException 
+     */
+    public static PreparedStatement ps4SentenceById(Connection conn,int pageSiz)
+            throws SQLException
+    {
+        String sql = "select id,leidenIdx,sentence,clusterNum from Sentence where id in (";
+        for( int ii=1; ii<=pageSiz-1; ii++ )
+            sql += "?,";
+        sql += "?) order by id";
+        
+        return conn.prepareStatement(sql);
+    }
+    
+    /**
+     * Create PreparedStatement for getting Tokens by SentenceNode id. The SQL 
+     * requires the Sentence(Node) id.
+     * Note: PreparedStatement returns Token: token, lemma.
+     * 
+     * @param conn
+     * @return
+     * @throws SQLException 
+     */
+    public static PreparedStatement ps4TokenLemma(Connection conn)
+            throws SQLException
+    {
+        String sql = "select token,lemma from Token where sn = ?";
+        return conn.prepareStatement(sql); 
+    }
+
+    /**
+     * Get a page of sentences (with its tokens/lemmas). Will also get Leiden index.
      * 
      * @param conn
      * @param offset
@@ -1130,7 +1227,7 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
                 ResultSet restk = tkn.executeQuery();
                 while( restk.next() )
                     { ltkn.add(new Token(restk.getString("token"),restk.getString("lemma"))); }
-                lsSN.add(new SentenceNode(ress.getInt("nid"),"",ress.getString("sentence"),ltkn));
+                lsSN.add(new SentenceNode(ress.getInt("nid"),ress.getInt("leidenIdx"),"",ress.getString("sentence"),ltkn));
             }
         } catch (SQLException ex) {
             Logger.getLogger("JOOQTest").log(Level.SEVERE, null, ex);
@@ -1138,8 +1235,52 @@ public class SentenceNode extends AbstractVertex implements Comparator<SentenceN
         
         return lsSN;
     }
-
     
+    /**
+     * Get Sentence(s) by Id. PreparedStatement can be built using ps4SentenceById().
+     * Will also get Leiden index.
+     * Eg:<samp>
+        for( int offs=1; offs<=sentCount; offs+=PAGESIZ )
+            { List<SentenceNode> lsn = sentenceById(ps,PAGESIZ,offs); }</samp>
+     * 
+     * @param sents PreparedStatement to get SentenceNode(s).
+     * @param toks PreparedStatement to get Token(s) of a SentenceNode.
+     * @param pageSiz Size of pagination.
+     * @param offset Offset to next page
+     * @return
+     * @throws SQLException 
+     */
+    public static List<SentenceNode> sentenceById( PreparedStatement sents, PreparedStatement toks, int pageSiz, long offset )
+            throws SQLException
+    {
+        List<SentenceNode> lsSN = new ArrayList<>();
+        for( long id=offset; id<=offset+pageSiz-1; id+=pageSiz )
+        {
+            for( int ii=1; ii<=pageSiz; ii++ )
+                sents.setLong(ii, id+ii-1);
+
+            ResultSet res = sents.executeQuery();
+            while( res.next() )
+            {
+                // Get the SentenceNode Tokens
+                List<Token> ltkn = new ArrayList<>();
+                toks.setInt(1,res.getInt("id"));
+                ResultSet restk = toks.executeQuery();
+                while( restk.next() )
+                    { ltkn.add(new Token(restk.getString("token"),restk.getString("lemma"))); }
+                
+                // Form the sentence node
+                SentenceNode sn = new SentenceNode(res.getInt("id"),res.getInt("leidenIdx"),"",res.getString("sentence"),ltkn);
+                sn.setSentenceClusterNum(new SentenceClusterNum(res.getInt("clusterNum")));
+                lsSN.add(sn);
+            }
+        }
+        
+        return lsSN;
+    }
+            
+    
+    //--------------------------------------------------------------------------
     /**
      * Dump out tokens.
      */

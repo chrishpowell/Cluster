@@ -29,7 +29,6 @@ import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.tokenize.SimpleTokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
-import opennlp.tools.util.Sequence;
 
 
 /**
@@ -104,7 +103,7 @@ public class Populate
                 continue;
             
             // Create a roughly unique name
-            String uname = "S"+dcat.getCategoryNum()+":"+(dIdx++)+"T"+System.currentTimeMillis();
+            String uname = "S"+dcat.getSc().getCategoryNum()+":"+(dIdx++)+"T"+System.currentTimeMillis();
             
             // Add sentence text to new Sentence
             SentenceNode s = new SentenceNode(uname,sent,dcat);

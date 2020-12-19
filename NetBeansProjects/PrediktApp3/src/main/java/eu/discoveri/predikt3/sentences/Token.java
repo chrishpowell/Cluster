@@ -139,6 +139,25 @@ public class Token <Void> extends GraphEntity implements Predicate<Void>
     public String getPOS() { return pos; }
     
     /**
+     * Count of lemmas (lees than or equal to Token count).
+     * 
+     * @param lt
+     * @return 
+     */
+    public static int countLemmasOfTokenList( List<Token> lt )
+    {
+        int lemmaCount = 0;
+        
+        for( Token t: lt )
+        {
+            if( t.getLemma().length() > 0 )
+                ++lemmaCount;
+        }
+        
+        return lemmaCount;
+    }
+    
+    /**
      * Token plus stem.
      * @return 
      */

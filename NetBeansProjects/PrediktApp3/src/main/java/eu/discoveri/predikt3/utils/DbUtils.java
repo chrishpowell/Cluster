@@ -7,12 +7,17 @@ package eu.discoveri.predikt3.utils;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import eu.discoveri.predikt3.cluster.ClusterDocSent;
+
 import eu.discoveri.predikt3.config.Constants;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -28,8 +33,6 @@ public class DbUtils
      */
     public static HikariDataSource getPooledDocDbConnection()
     {
-        HikariDataSource connection = null;
-
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl("jdbc:mysql://localhost:3306/documents?useSSL=false&serverTimezone=CET");
         config.setUsername("chrispowell");
@@ -52,8 +55,6 @@ public class DbUtils
      */
     public static HikariDataSource getPooledLemmaDbConnection()
     {
-        HikariDataSource connection = null;
-
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl("jdbc:mysql://localhost:3306/lemma?useSSL=false&serverTimezone=CET");
         config.setUsername("chrispowell");
@@ -132,6 +133,52 @@ public class DbUtils
         empty = conn.prepareStatement("SET FOREIGN_KEY_CHECKS = 1");
         empty.executeUpdate();
     }
+    
+        
+    /**
+     * Count of 'useful' clusters and total sentences: Clusters with more than two sentences.
+     * @param conn
+     * @return [0]: Clusters count, [1]: Sentences count
+     * @throws java.sql.SQLException 
+     */
+    public static int[] usefulClusters( Connection conn )
+            throws SQLException
+    {
+        int counts[] = new int[2];
+        Statement st = conn.createStatement();
+
+        ResultSet numClusters = st.executeQuery("select sum(sc) as ssc, count(*) as scc from (select count(*) as sc from Sentence group by clusterNum having clusterNum > -1 and sc >= " +Constants.SMALLESTCLUSTER+ ") as c");
+        while( numClusters.next() )
+        {
+            counts[0] = numClusters.getInt("ssc");  // Sentences
+            counts[1] = numClusters.getInt("scc");  // Clusters
+        }
+        
+        return counts;
+    }
+    
+    /**
+     * Documents and sentences of cluster.
+     * 
+     * @param conn
+     * @return
+     * @throws SQLException 
+     */
+    public static List<ClusterDocSent> clusterDocSent( Connection conn )
+            throws SQLException
+    {
+        List<ClusterDocSent> lcds = new ArrayList<>();
+        Statement st = conn.createStatement();
+        
+        ResultSet rs = st.executeQuery("select clusterNum,docId,id as nid from Sentence group by clusterNum,docId,id having clusterNum > -1 order by clusterNum,docId");
+        while( rs.next() )
+        {
+            lcds.add( new ClusterDocSent(rs.getInt("clusterNum"),rs.getInt("docId"),rs.getInt("nid")) );
+        }
+        
+        return lcds;
+    }
+    
     
     /**
      * M A I N

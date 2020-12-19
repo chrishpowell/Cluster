@@ -16,42 +16,52 @@ import eu.discoveri.predikt3.graph.GraphEntity;
 public class DocumentCategory extends GraphEntity
 {
     // Number or category for a document
-    private final long categoryNum;
+    private final SimilarCategory sc;
+    private static final SimilarCategory nullCat = new SimilarCategory(-1,""); 
 
     /**
      * Constructor.
-     * @param categoryNum Number or category for a document
      * @param name Name of category (eg:"Ships", "Ceiling wax")
      * @param namespace  Namespace of name.
+     * @param sc
      */
-    public DocumentCategory(long categoryNum, String name, String namespace)
+    public DocumentCategory(String name, String namespace, SimilarCategory sc)
     {
         super(name, namespace);
-        this.categoryNum = categoryNum;
+        this.sc = sc;
     }
     
     /**
      * Constructor.
-     * @param categoryNum Number or category for a document
+
+     * @param sc
      * @param name Name of category (eg:"Ships", "Ceiling wax")
      */
-    public DocumentCategory(int categoryNum, String name)
+    public DocumentCategory(String name, SimilarCategory sc )
     {
-        this(categoryNum,name,"eu.discoveri.predikt");
+        this(name,"eu.discoveri.predikt",sc);
     }
-
+    
     /**
      * Constructor.
-     * @param categoryNum 
+     * @param sc
      */
-    public DocumentCategory(long categoryNum)
+    public DocumentCategory(SimilarCategory sc)
     {
-        this(categoryNum,"","eu.discoveri.predikt");
+        this("","eu.discoveri.predikt",sc);
+    }
+    
+    /**
+     * Constructor.  Null category.
+     */
+    public DocumentCategory()
+    {
+        this("","",nullCat);
     }
 
     /**
-     * Category number.
+     * Get the category for this document.
      * @return 
      */
-    public long getCategoryNum() { return categoryNum; }
+    public SimilarCategory getSc() { return sc; }
 }
