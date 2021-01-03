@@ -69,6 +69,6 @@ public class Pair implements Comparable<Pair>
     @Override
     public String toString()
     {
-        return "[" +doc0+ "]:[" +doc1+ "]> " +cosScore;
+        return "[" +doc0+ "," +doc1+ "] (" +cosScore+ ") Remove: " +flagRemove;
     }
 }
