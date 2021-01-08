@@ -5,6 +5,7 @@
  */
 package eu.discoveri.fptree;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,7 +53,12 @@ public class FTTreeData
             });
 
             Collections.sort(v,new LemmaCountComparator(lcOrder));
-            v.forEach(System.out::println);
+            List<FTTree<LemmaCount>> lnlc = new ArrayList<>();
+            v.forEach(lc -> {
+                lnlc.add(new FTTree(v));
+            });
+            
+            
         });
     }
     
