@@ -6,125 +6,105 @@
 package eu.discoveri.fptree;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 
 /**
+ * Class to handle items of a tree, specifically determining frequent items.  It
+ * uses a frequent pattern growth algorithm.
+ * 
  * NB: NOT thread safe.
+ * NB: Note freqItems *must* be sorted in ascending and descending order for
+ * this class to function correctly (usually via SQL functions).
+ * 
+ * See following:
+ * Clustering algorithms in https://dataminingbook.info/book_html/chap8/book-watermark.html
+ * [Data Mining and Machine Learning, Zaki and Meira]
+ * 
+ * Also: https://www2.cs.sfu.ca/~ester/papers/FWE03Camera.pdf [Hierarchical Document
+ * Clustering Using Frequent Itemsets, B Fung et al]
+ * 
+ * Freq. Pattern tree building in https://www.arcjournals.org/pdfs/ijrscse/v4-i4/3.pdf
+ * [Analyzing Working of FP-Growth Algorithm for Frequent Pattern Mining, Kaur and Jagdev]
+ * 
+ * Also useful:
+ * http://berlin.csie.ntnu.edu.tw/PastCourses/2004S-MachineLearningandDataMining/lectures/MLDM2004S_Paper-Hierarchical Document Clustering Using Frequent Itemsets.pdf
+ * 
  * @author Chris Powell
- * @param <T> Contents of node.  Must implement equals().
+ * Note: Item must implement equals() and compareTo()
  *
  */
-public class FTTree<T>
+public class FTTree extends DTree<Item>
 {
-    // Root node
-    private static FTTree   root;
-    // Unique id
-    private final UUID      uuid = UUID.randomUUID();
-    
-    // Contents of node
-    private T               contents = null;
-    // Children of this node
-    private List<FTTree<T>> children = new ArrayList<>();
-    // Parent of this node
-    private FTTree<T>       parent = null;
     // Flag if visited
-    private boolean         visited = false;
-    // Node (contents) count
-    private int             nodeCount = 1;
+    private boolean     visited = false;
     // Conditional Pattern Base count
-    private int             cptbCount = 0;
+    private int         cptbCount = 0;
 
     // Node head map: Item to cross-link (tree) list with Idx 0 being head
-    private Map<T,List<FTTree<T>>>  nodeHeadMap = new HashMap<>();
-    
-    // List of conditional pattern bases
-    private List<List<FTTree<T>>>   cpBases = new ArrayList<>();
-    
+    private Map<Item,List<DTree<Item>>>  nodeHeadMap = new HashMap<>();
 
+    
     /**
      * Constructor.
      * @param contents 
      */
-    public FTTree(T contents)
+    public FTTree(Item contents)
     {
-        this.contents = contents;
+        super(contents);
     }
     
     /**
-     * Create a root node.
+     * Create a (single) root node for this tree.
      * 
-     * @param <T>
-     * @param item
+     * @param root item
      * @return 
      */
-    public static <T> FTTree<T> initialiseTree(T item)
+    public static Root initialise(Item root)
     {
-        root = new FTTree(item);
-        return root;
+        return new Root(root);
     }
 
-    /**
-     * Add a child to a node.
-     * 
-     * @param child
-     * @return 
-     */
-    public FTTree<T> addChild(FTTree<T> child)
+    static class Root extends FTTree
     {
-        child.setParent(this);
-        this.children.add(child);
-        return child;
+        public Root(Item contents)
+        {
+            super(contents);
+        }
     }
 
-    /**
-     * Get all children of a node.
-     * 
-     * @return 
-     */
-    public List<FTTree<T>> getChildren() { return children; }
-    public void addChildren(List<FTTree<T>> children)
-    {
-        children.forEach(each -> each.setParent(this));
-        this.children.addAll(children);
-    }
     
     /**
      * Mutators.
      * @return 
      */
-    public int getNodeCount() { return nodeCount; }
-    private void sumNodeCount( int nodeCount  ) { this.nodeCount += nodeCount; }
-    private void setNodeCount( int nodeCount ) { this.nodeCount = nodeCount; }
-    public void incrNodeCount() { ++this.nodeCount; }
-
     public int getCptbCount() { return cptbCount; }
     public void incrCptbCount() { ++this.cptbCount; }
-
-    public T getContents() { return contents; }
-    public void setContents(T contents) { this.contents = contents; }
-
-    public FTTree<T> getParent() { return parent; }
-    private void setParent(FTTree<T> parent) { this.parent = parent; }
 
     public boolean isVisited() { return visited; }
     public void setVisited(boolean visited) { this.visited = visited; }
 
-    public static FTTree getRoot() { return root; }
-
-    public UUID getUuid() { return uuid; }
     
-    public Map<T,List<FTTree<T>>> getNodeHeadMap() { return nodeHeadMap; }
+    /**
+     * Get children of this node.
+     * 
+     * @return 
+     */
+    public List<FTTree> getChildren()
+    {
+        return children.stream().map(c -> (FTTree)c).collect(Collectors.toList());
+    }
+    
+    /**
+     * Map of list of "head" nodes.
+     * @return 
+     */
+    public Map<Item,List<DTree<Item>>> getNodeHeadMap() { return nodeHeadMap; }
     
     /**
      * Copy a node (not a shallow, but not a deep copy).
@@ -132,90 +112,94 @@ public class FTTree<T>
      * @param oldNode
      * @return 
      */
-    public FTTree<T> simpleCopy( FTTree<T> oldNode )
+    public FTTree simpleCopy( FTTree oldNode )
     {
-        FTTree<T> copyNode = new FTTree( oldNode.getContents() );
+        FTTree copyNode = new FTTree( oldNode.getContents() );
         copyNode.nodeCount = oldNode.nodeCount;
         
         return copyNode;
     }
-
-    /**
-     * Merge lists of nodes into a conditional FP list. Constructs a list 
-     * of nodes using a pre-determined node count from each entered node and
-     * adding counts when a match occurs.
-     * 
-     * @param nodes 
-     */
-    public void conditionalFPlist( List<FTTree<T>> nodes )
-    {
-        // 
-    }
     
     /**
-     * Add list of items (creating a node) to a tree. Constructs a (non-binary)
-     * tree of nodes matching along path, incrementing counts. T Must implement
-     * equals().
-     * 
-     * @param node a node in the tree
-     * @param items List of items to store in tree.
-     */
-    public void matchAndInsert( FTTree<T> node, List<T> items )
-    {
-        // Insert from root of items
-        insertTree(node,node,0,items);
-    }
-    
-    /**
-     * Add list of item nodes to a root node. Constructs a (non-binary) tree of
-     * nodes matching along path, incrementing counts. T Must implement equals().
+     * Add list of item nodes to a root node as determined by fpGrowth() algo.
+     * Constructs a (non-binary) tree of nodes matching along path, incrementing
+     * counts.
      * 
      * @param items List of items to be stored in tree.
      */
-    public void matchAndInsert( List<T> items )
+    public void matchAndInsert( List<Item> items )
     {
         // Insert from root of items
-        insertTree(root,root,0,items);
+        insertTree(this,this,0,items, 0);
     }
 
     /**
-     * Insert a list of items into tree.  T must implement equals().
+     * Recursive routine to insert a list of items into tree.  Also creates
+     * cross-link maps (paths across the tree for nodes with the same contents).
      * 
+     * Algorithm 8.5 in https://dataminingbook.info/book_html/chap8/book-watermark.html
+     * https://www2.cs.sfu.ca/~ester/papers/FWE03Camera.pdf
+     * http://berlin.csie.ntnu.edu.tw/PastCourses/2004S-MachineLearningandDataMining/lectures/MLDM2004S_Paper-Hierarchical Document Clustering Using Frequent Itemsets.pdf
+     * 
+     * @param root
      * @param treeNode
      * @param itemIdx
-     * @param items 
+     * @param items
+     * @param initCount
+     * @param incrBy
      */
-    private void insertTree( FTTree<T> root, FTTree<T> treeNode, int itemIdx, List<T> items )
+    private void insertTree( FTTree root, FTTree treeNode, int itemIdx, List<Item> items, int initCount )
     {
-        // Item index check
-        if( itemIdx >= items.size() ) return;                   // End of list?
-        // Item
-        T item = items.get(itemIdx);
-        
-        // This will be the next node in the recursion
-        FTTree<T> nextNode = null;
+        // End of Item list?
+        if( itemIdx >= items.size() ) return;
+        // Get Item (in index order)
+        Item item = items.get(itemIdx);
+
+        // Find children contents matching current item
+        Optional<FTTree> tNode = treeNode.getChildren().stream()        // Get the children
+                .filter(lc -> item.equals(lc.getContents()))            // Match predicate (current item)
+                .findFirst();
 
         // Does this node have any matching children contents...?
-        Optional<FTTree<T>> tNode = treeNode.getChildren().stream()
-            .filter(tn -> item.equals(tn.getContents())).findFirst();
-
-        if( tNode.isPresent() )                                 // ...Yes
+        // (Certainly not on first call after initialise())
+        if( tNode.isPresent() )                                         // ...Yes
         {
-            // Node already exists, increment count
-            nextNode = tNode.get();
-            nextNode.incrNodeCount();
+            // Node already exists
+            FTTree nextNode = tNode.get();
+//            nextNode.incrNodeCount();
+            
+            insertTree( root, nextNode, ++itemIdx, items, initCount );
         }
-        else                                                    // ...No
+        else                                                            // ...No
         {
             // Ok, need to add a new node
-            nextNode = treeNode.addChild(new FTTree(item));
+            FTTree nextNode = (FTTree)treeNode.addChild(new FTTree(item));
+            nextNode.setNodeCount(initCount);  // Only necessary to override default
+            
+//            System.out.println("  Adding new node: " +nextNode.getContents().getName());
+
             // Item
-            T itm = nextNode.getContents();
+            Item itm = nextNode.getContents();
+            // New node on tree, incr along path ***********************
+            root.incrNodeCount();
+            
+            // Increment counts along path
+                    //----------------------
+                    List<DTree<Item>> path = traceParents(nextNode);
+//                    System.out.println("  Path of node: " +nextNode.getContents().getName());
+//                    System.out.print("  > ");
+                    path.forEach(n -> {
+//                        nextNode.sumNodeCount(incrBy);
+                        n.incrNodeCount();
+//                        System.out.print(" " +n.getContents().getName());
+                    });
+//                    System.out.println("");
+                    //----------------------
             
             // "First" node head links
             if( !nodeHeadMap.containsKey(itm) )
             { //...Whole new node
-                List<FTTree<T>> nodeLinks = new ArrayList<>();
+                List<DTree<Item>> nodeLinks = new ArrayList<>();
                 nodeLinks.add(nextNode);
                 nodeHeadMap.put(itm, nodeLinks);
             }
@@ -223,28 +207,116 @@ public class FTTree<T>
             { //...Link between nodes with same item
                 nodeHeadMap.get(itm).add(nextNode);
             }
+            
+            insertTree( root, nextNode, ++itemIdx, items, initCount );
         }
+    }
+    
+    /**
+     * Add nodes to tree as determined by fpGrowth() algo.
+     * 
+     * @param items
+     * @param initCount
+     * @param incrBy 
+     */
+    private void matchAndInsertFreq( List<Item> items, int initCount, int incrBy )
+    {
+        insertTree(this,this,0,items,initCount);
+    }
 
-        root.incrNodeCount();
-        insertTree( root, nextNode, ++itemIdx, items );
+    /**
+     * Build Frequent Pattern trees. Freq. Pattern tree building in
+     * https://www.arcjournals.org/pdfs/ijrscse/v4-i4/3.pdf
+     * [Analyzing Working of FP-Growth Algorithm for Frequent Pattern Mining, Kaur and Jagdev]
+     * Algorithm 8.2.3 in
+     * https://dataminingbook.info/book_html/chap8/book-watermark.html
+     * 
+     * Note: This method expects a list of frequent items to initiate the process,
+     * plus the cross link paths across the initial tree (formed in insertTree()).
+     * 
+     * For a compact tree, the most frequent items should be at the top of the
+     * tree (that is, nodes having most references will be towards the root and
+     * with a higher count.
+     * 
+     * For each frequent item, get the cross-link map entry of the (freq. item)
+     * nodes in the initial tree
+     * --------------------------------------------------
+     * R, P, F as defined in algo.
+     * FTTree rTree, Set<Item> pItemSet, Set<Item> fFreqItems
+     * @param rTree (R) Freq. Pattern tree constructed from doc. db 
+     * @param pItemSet (P)
+     * @param fFreqItems (F)
+     * @return 
+     *         
+     * Algo: Remove infrequent items from tree (R).  Below uses
+     *   SupportCount.getFreqItemSupIncr(), ie: infrequent items already removed.
+        // Algo: Insert subsets of tree (R) into freqItems (F)
+        //... Both above handled outside of this routine (listFlattenedTree(), remove() and subsets())
+     * ----------------------------------------------------
+     */
+    public List<FTTree> fpGrowth()
+    {
+        // Frequent itemsets to be mined from tree
+        List<FTTree> freqItemSets = new ArrayList<>();
+        
+        SupportCount.globalSuppDesc().forEach((i,d) -> {
+            System.out.println("   ##> " +i.getName()+ ", " +d);
+        });
+
+        /*
+         * Process projected FP-trees for each frequent item.
+         * Form an FP tree from cross-link paths, setting counts along the paths
+         */
+        // Only interested in frequent items, ordered by sup(i) desc, having highest support counts towards root
+        SupportCount.globalSuppDesc().forEach((i,d) ->
+        {
+            // Initialise FP-tree for i
+            FTTree t = initialise(i);
+
+            // Get paths from initial tree cross-links
+            List<List<DTree<Item>>> lpd = crosslinkPathTopDown(i);
+
+            // For each entry build an FP tree via recursion
+            lpd.forEach(p ->
+            {
+                // Create item list of i
+                List<Item> items = new ArrayList<>();
+
+                // Build path of items excluding i
+                int pathSiz = p.size()-1;
+                // Add path to FP-tree
+                for( int ii=0; ii < pathSiz; ii++ )
+                {
+                    DTree<Item> node = p.get(ii);
+                    items.add(node.getContents());
+                }
+
+                // Build the FP tree projections (items,initCount,incrBy)
+                t.matchAndInsertFreq(items, p.get(pathSiz).getNodeCount(),p.get(pathSiz).getNodeCount());
+            });
+
+            // Add to tree list
+            freqItemSets.add(t);
+        });
+        
+        return freqItemSets;
     }
 
     /**
      * Depth first search.
      * 
-     * @param <T>
      * @param node
      * @return 
      */
-    public static <T> List<FTTree<T>> dfs( FTTree<T> node )
+    public static List<FTTree> dfs( FTTree node )
     {
-        List<FTTree<T>> path = new ArrayList<>();
+        List<FTTree> path = new ArrayList<>();
         
         node.setVisited(true);
         path.add(node);
         System.out.print(" Node: " +node.getContents());
         
-        List<FTTree<T>> ln = node.getChildren();
+        List<FTTree> ln = node.getChildren();
         ln.stream().filter(n0 -> n0!=null && !n0.isVisited()).forEach(n1 -> dfs(n1));
         
         return path;
@@ -256,9 +328,9 @@ public class FTTree<T>
      * @param node
      * @return 
      */
-    public List<FTTree<T>> traceParents( FTTree<T> node )
+    public List<DTree<Item>> traceParents( DTree<Item> node )
     {
-        List<FTTree<T>> path = new ArrayList<>();
+        List<DTree<Item>> path = new ArrayList<>();
         
         while( node.getParent() != null )
         {
@@ -270,24 +342,23 @@ public class FTTree<T>
     }
     
     /**
-     * List of paths from tree root to given cross-link item (node contents) of
-     * node head map.
+     * List of paths (path: List of DTree) from tree root to given cross-link
+     * items (node contents) of node head map.
      * 
      * @param item
-     * @param tree Initialised tree
      * @return 
      */
-    public List<List<FTTree<T>>> crosslinkPathTopDown( FTTree tree, T item )
+    public List<List<DTree<Item>>> crosslinkPathTopDown( Item item )
     {
-        List<List<FTTree<T>>> root2leaf = new ArrayList<>();
+        List<List<DTree<Item>>> root2leaf = new ArrayList<>();
         
         // Cross-links of node from node head map
-        List<FTTree<T>> lfi = nodeHeadMap.get(item);
+        List<DTree<Item>> lfi = nodeHeadMap.get(item);
         
-        // For each cross-link path get path to root and reverse
+        // For each cross-link path get path to root and reverse (ie root->node)
         lfi.forEach(p ->
         {
-            List<FTTree<T>> rp = tree.traceParents(p);
+            List<DTree<Item>> rp = traceParents(p);
             Collections.reverse(rp);
             root2leaf.add(rp);
         });
@@ -296,88 +367,68 @@ public class FTTree<T>
     }
     
     /**
-     * List of paths from cross-link item leaf (node contents) of
+     * List of paths from cross-link items leaf (node contents) of
      * node head map to root.
      * 
      * @param item
-     * @param tree Initialised tree
      * @return 
      */
-    public List<List<FTTree<T>>> crosslinkPathBottomUp( FTTree tree, T item )
+    public List<List<DTree<Item>>> crosslinkPathBottomUp( Item item )
     {
-        List<List<FTTree<T>>> leaf2root = new ArrayList<>();
+        List<List<DTree<Item>>> leaf2root = new ArrayList<>();
         
         // Cross-links of node from node head map
-        List<FTTree<T>> lfi = nodeHeadMap.get(item);
+        List<DTree<Item>> lfi = nodeHeadMap.get(item);
         
         // For each cross-link path get path to root and reverse
         lfi.forEach(p ->
         {
-            List<FTTree<T>> rp = tree.traceParents(p);
+            List<DTree<Item>> rp = traceParents(p);
             leaf2root.add(rp);
         });
                 
         return leaf2root;
     }
     
-    @Override
-    public int hashCode()
-    {
-        int hash = 7;
-        hash = 37 * hash + Objects.hashCode(this.uuid);
-        return hash;
-    }
-
     /**
-     * Equates *contents* (contained class T) of this class.
-     * @param obj
+     * Find leaf item? Not functional atm.
+     * @param tree
      * @return 
      */
-    @Override
-    public boolean equals(Object obj)
+    public List<Item> findLeafItems( FTTree tree )
     {
-        if( this == obj ) { return true; }
-        if( obj == null ) { return false; }
-        if( getClass() != obj.getClass() ) { return false; }
-        
-        final FTTree<T> other = (FTTree<T>) obj;
-        return this.getContents().equals(other.getContents());
+        throw new UnsupportedOperationException();
     }
     
     /**
-     * Dump this node.
+     * Convert streamed tree to a list.
      * 
      * @return 
      */
-    @Override
-    public String toString()
+    public List<FTTree> listFlattenedTree()
     {
-        return uuid.toString() +" : "+ contents+ ": Parent [" +parent+ "] numChildren: " +children.size()+ ", (" +nodeCount+ ")";
+        // streamTree() from superclass
+        return streamTree().map(s -> (FTTree)s).collect(Collectors.toList());
     }
-    
-    /**
-     * Print tree with UUIDs etc.
-     * @param <T>
-     * @param node
-     * @param appender 
-     */
-    public static <T> void printFullTree(FTTree<T> node, String appender)
-    {
-        System.out.println(appender + node);
-        node.getChildren().forEach(each ->  printFullTree(each, appender + appender));
-    }
+    //--------------------------------------------------------------------------
+
     
     /**
      * Print simple tree.
-     * @param <T>
-     * @param node
-     * @param appender 
-     * @param uid 
+     * Outputs denoted by:
+     *   FTTree contents (NB: T may include contents counts)
+     *   <> node (parent+children) count
+     *   {} conditional pattern base count
+     *   optional UID
+     *
+     * @param node node of tree 
+     * @param appender indent char (usually spaces)
+     * @param uid output if true
      */
-    public static <T> void printTree(FTTree<T> node, String appender, boolean uid )
+    public static void printTree(FTTree node, String appender, boolean uid )
     {
-        System.out.println(appender + node.getContents()+ "(" +node.getNodeCount()+ "){" +node.getCptbCount()+ "}" +(uid ? " "+node.getUuid().toString() : " "));
-        node.getChildren().forEach(each ->  printTree(each, appender + appender, uid));
+        System.out.println(appender + node.getContents()+ ":<" +node.getNodeCount()+ ">{" +node.getCptbCount()+ "}|" +node.getFreqCount()+ "|" +(uid ? " "+node.getUuid().toString() : " "));
+        node.getChildren().stream().map(each -> (FTTree)each).forEach(each ->  printTree((FTTree)each, appender + appender, uid));
     }
     
     /**
@@ -385,7 +436,7 @@ public class FTTree<T>
      * @param <T>
      * @param n 
      */
-    public static <T> void dumpFromNode( FTTree<T> n )
+    public static <T extends Comparable> void dumpFromNode( FTTree n )
     {
         n.getChildren().forEach(System.out::println);
     }
@@ -398,7 +449,7 @@ public class FTTree<T>
     public static void dumpNodeHeadMap(FTTree tree)
     {
         System.out.println("Node Head Map (short):");
-        Map<Item,List<FTTree<Item>>> nhm = tree.getNodeHeadMap();
+        Map<Item,List<DTree<Item>>> nhm = tree.getNodeHeadMap();
         nhm.forEach((k,v) -> {
             System.out.println("Key: " +k+ "(" +v.get(0).getNodeCount()+ "):");
             v.forEach(i ->
@@ -418,7 +469,7 @@ public class FTTree<T>
     public static void dumpNodeHeadMapFull(FTTree tree)
     {
         System.out.println("Node Head Map (long)");
-        Map<Item,List<FTTree<Item>>> nhm = tree.getNodeHeadMap();
+        Map<Item,List<DTree<Item>>> nhm = tree.getNodeHeadMap();
         nhm.forEach((k,v) -> {
             System.out.println("Key: " +k+ "(" +v.get(0).getNodeCount()+ "):");
             v.forEach(i ->
@@ -429,244 +480,28 @@ public class FTTree<T>
         });
     }
     
-    
     /**
-     * M A I N
-     * =======
-     * @param args 
+     * Dump all paths to item type.
+     * 
+     * @param item (Implement toString())
      */
-    public static void main(String[] args)
+    public void dumpLeafPaths( Item item )
     {
-        FTTree tree = FTTree.initialiseTree(new Item("root",0));
-
-        // Count in opposite alpha order
-        Item itemA = new Item("a",26);
-        Item itemB = new Item("b",25);
-        Item itemC = new Item("c",24);
-//        Item itemD = new Item("d",23);
-//        Item itemE = new Item("e",22);
-        Item itemF = new Item("f",21);
-        Item itemM = new Item("m",14);
-        Item itemP = new Item("p",11);
-
-        List<Item> ln01 = Arrays.asList(new Item[]{itemF,itemC,itemA,itemM,itemP});
-        List<Item> ln02 = Arrays.asList(new Item[]{itemF,itemC,itemA,itemB,itemM});
-        List<Item> ln03 = Arrays.asList(new Item[]{itemF,itemB});
-        List<Item> ln04 = Arrays.asList(new Item[]{itemC,itemB,itemP});
-        List<Item> ln05 = Arrays.asList(new Item[]{itemF,itemC,itemA,itemM,itemP});
-//        List<Item> lnC = Arrays.asList(new Item[]{itemC});
-
-        System.out.println("1st list (f,c,a,m,p)...");
-        tree.matchAndInsert(ln01);
-        System.out.println("2nd list (f,c,a,b,m)...");
-        tree.matchAndInsert(ln02);
-        System.out.println("3rd list (f,b)...");
-        tree.matchAndInsert(ln03);
-        System.out.println("4th list (c,b,p)...");
-        tree.matchAndInsert(ln04);
-        System.out.println("5th list (f,c,a,m,p)...");
-        tree.matchAndInsert(ln05);
-
-//------------------------------------------------------------------------------
-//  Expect [()s denote count]:
-//   root [0](21)
-//         f [6](4)
-//            c [3](3)
-//               a [1](3)
-//                  m [13](2)
-//                     p [16](2)
-//                  b [2](1)
-//                     m [13](1)
-//            b [2](1)
-//         c [3](1)
-//            b [2](1)
-//               p [16](1)
-//------------------------------------------------------------------------------
-        System.out.println("\r\n==================================================");
-        System.out.println("Note: ()s denote count");
-        FTTree.printTree(tree, " ", false);
-        System.out.println("====================================================");
-        
-        System.out.println("\r\n------------------------------------------------");
-        dumpNodeHeadMapFull(tree);
-        System.out.println("------------------------------------------------");
-        
-        
-        //........................................................................................................
-        // Paths from root to leaf [p]
-        System.out.println("\r\n==================================================");
-        System.out.println("Paths to p:");
-
-        // All Ps paths to root
-        List<List<FTTree<Item>>> llftP = tree.crosslinkPathBottomUp(tree, itemP);
-        List<List<FTTree<Item>>> cllftP = new ArrayList<>();
-        
-        // Root to leaf (print)
-        llftP.forEach(lp ->
+        System.out.println("Paths to item: " +item);
+        List<List<DTree<Item>>> lpd = crosslinkPathTopDown(item);
+        lpd.forEach(lfi ->
         {
-            FTTree<Item> leaf = lp.get(0);
-            System.out.println("Leaf: " +leaf.getContents().getName()+ "(" +leaf.getNodeCount()+ ") [" +leaf.getUuid()+ "]");
-            
-            Collections.reverse(lp);
-            System.out.print("  >>");
-            lp.forEach(r -> System.out.print(" " +r.getContents().getName()+ "(" +r.getNodeCount()+ ") "));
-            System.out.println("");
-        });
-                
-        System.out.println("Conditional FP-tree");
-        System.out.println("\r\n----------------------------------------------------");
-        System.out.println("CFPtree (p):");
-
-        int[] leafTot = new int[1];
-        llftP.forEach(lp ->
-        {
-            FTTree<Item> leaf = lp.get(lp.size()-1);
-            leafTot[0] += leaf.getNodeCount();
-            
-            // Set each node count to leaf count
-            List<FTTree<Item>> cfptP = lp.stream()
-                    .filter(p -> !p.equals(leaf))
-                    .map(p ->
-                    {
-                        p.setNodeCount(leaf.getNodeCount());
-                        return p;
-                    })
-                    .collect(Collectors.toList());
-            
-            cllftP.add(cfptP);
-        });
-        
-        List<FTTree<Item>> merge = cllftP.get(0);
-        cllftP.remove(0);
-        
-        cllftP.forEach(lp ->
-        {
-            lp.forEach(l ->
-            {
-                System.out.println("(l)--> " +l.getContents().getName()+ ", " +l.getContents().getCount());
-                int i = merge.indexOf(l);
-                if( i >=0 )
-                {
-                    FTTree<Item> m = merge.get(i);
-                    System.out.println("merge val: " +m.getContents().getName()+"/"+m.getContents().getCount()+ ", Upd val: " +l.getContents().getName()+"/"+l.getContents().getCount());
-                    m.sumNodeCount(l.getNodeCount());
-                }
+            System.out.print("> ");
+            lfi.forEach(pd -> {
+                System.out.print(" " +pd.getContents()+ "[" +pd.getNodeCount()+ "]");
             });
-        });
-        
-        // Removed unmatched nodes
-        for( Iterator<FTTree<Item>> iter=merge.iterator(); iter.hasNext(); )
-        {
-            FTTree<Item> m = iter.next();
-            if( m.getNodeCount() < leafTot[0] )
-                iter.remove();
-        }
-        
-        merge.forEach(m -> {
-            System.out.println("....> " +m.getContents().getName()+ ": " +m.getNodeCount());
-        });
-        //........................................................................................................
-//        FTTree cpTreeP = FTTree.initialiseTree(new Item("rootP",0));
-//        
-//        llftP.forEach(lp ->
-//        {
-//            FTTree<Item> leaf = lp.get(lp.size()-1);
-//            
-//            // Set each node count to leaf count
-//            List<FTTree<Item>> cfptP = lp.stream()
-//                                        .filter(p -> !p.equals(leaf))
-//                                        .map(p ->
-//                                        {
-//                                            p.setNodeCount(leaf.getNodeCount());
-//                                            return p;
-//                                        })
-//                                        .collect(Collectors.toList());
-//
-//            // Merge lists into conditional FP tree (list)
-//            cpTreeP.conditionalFPlist(cfptP);
-//        });
-//
-//        FTTree.printTree(cpTreeP, " ", false);
-        System.out.println("====================================================");
-        
-        // Paths from root to leaf [m]
-        System.out.println("\r\n==================================================");
-        System.out.println("Paths to m:");
-        List<List<FTTree<Item>>> llftM = tree.crosslinkPathBottomUp(tree, itemM);
-        llftM.forEach(lp ->
-        {
-            FTTree<Item> leaf = lp.get(0);
-            System.out.println("Leaf: " +leaf.getContents().getName()+ "(" +leaf.getNodeCount()+ ") [" +leaf.getUuid()+ "]");
-            
-            Collections.reverse(lp);
-            System.out.print("  >>");
-            lp.forEach(r -> System.out.print(" " +r.getContents().getName()+ "(" +r.getNodeCount()+ ") "));
             System.out.println("");
         });
-        
-        System.out.println("Conditional FP-tree");
-        System.out.println("\r\n----------------------------------------------------");
-        System.out.println("CFPtree (m):");
-        FTTree cpTreeM = FTTree.initialiseTree(new Item("rootM",0));
-        
-        llftM.forEach(lp ->
-        {
-            FTTree<Item> leaf = lp.get(lp.size()-1);
-            // Construct tree with 
-            List<FTTree<Item>> cfptM = lp.stream()
-                                        .filter(p -> !p.equals(leaf))
-                                        .map(p ->
-                                        {
-                                            p.setNodeCount(leaf.getNodeCount());
-                                            return p;
-                                        })
-                                        .collect(Collectors.toList());
-
-            cpTreeM.conditionalFPlist(cfptM);
-        });
-
-        FTTree.printTree(cpTreeM, " ", false);
-        System.out.println("====================================================");
-    }
-}
-
-//------------------------------------------------------------------------------
-class Item
-{
-    private final String  name;
-    private final int     count;
-
-    public Item(String name, int count)
-    {
-        this.name = name;
-        this.count = count;
-    }
-
-    public String getName() { return name; }
-    public int getCount() { return count; }
-
-    @Override
-    public int hashCode()
-    {
-        int hash = 3;
-        hash = 97 * hash + Objects.hashCode(this.name);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if( this == obj ) { return true; }
-        if( obj == null ) { return false; }
-        if( getClass() != obj.getClass() ) { return false; }
-        
-        final Item other = (Item) obj;
-        return this.name.equals(other.name);
     }
     
     @Override
     public String toString()
     {
-        return name +" ["+ count+ "]";
+        return ""+contents;
     }
 }

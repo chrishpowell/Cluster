@@ -3,16 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package eu.discoveri.hcluster.test;
+package eu.discoveri.tests;
 
 /**
  *
  * @author chrispowell
  */
-public class ClusterA
+public abstract class GenericTest<U,V extends Comparable>
 {
-    public static void main(String[] args)
-    {
-        
-    }
+    
 }
